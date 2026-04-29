@@ -1,74 +1,196 @@
 'use strict';
 
-const form       = document.getElementById('loginForm');
-const emailInput = document.getElementById('email');
-const pwInput    = document.getElementById('password');
-const submitBtn  = document.getElementById('submitBtn');
-const spinner    = document.getElementById('spinner');
-const btnText    = submitBtn.querySelector('.btn-text');
+const auth          = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+const githubProvider = new firebase.auth.GithubAuthProvider();
 
-function showError(inputEl, msgEl, msg) {
+const form         = document.getElementById('loginForm');
+const emailInput   = document.getElementById('email');
+const pwInput      = document.getElementById('password');
+const nameInput    = document.getElementById('name');
+const submitBtn    = document.getElementById('submitBtn');
+const spinner      = document.getElementById('spinner');
+const btnText      = submitBtn.querySelector('.btn-text');
+const alertBox     = document.getElementById('alertBox');
+const nameField    = document.getElementById('nameField');
+const rememberRow  = document.getElementById('rememberRow');
+const forgotLink   = document.getElementById('forgotLink');
+const toggleMode   = document.getElementById('toggleMode');
+const formTitle    = document.getElementById('formTitle');
+const formSubtitle = document.getElementById('formSubtitle');
+const togglePrompt = document.getElementById('togglePromptText');
+
+let isRegisterMode = false;
+
+// Redirect if already signed in
+auth.onAuthStateChanged(user => {
+  if (user) window.location.href = 'dashboard.html';
+});
+
+// ── Helpers ──────────────────────────────────────────────
+
+function showAlert(msg, type = 'error') {
+  alertBox.textContent = msg;
+  alertBox.className = 'alert alert-' + type;
+  alertBox.hidden = false;
+}
+
+function clearAlert() { alertBox.hidden = true; }
+
+function showFieldError(inputEl, msgEl, msg) {
   inputEl.classList.add('is-invalid');
-  msgEl.textContent = msg;
+  document.getElementById(msgEl).textContent = msg;
 }
 
-function clearError(inputEl, msgEl) {
+function clearFieldError(inputEl, msgEl) {
   inputEl.classList.remove('is-invalid');
-  msgEl.textContent = '';
+  document.getElementById(msgEl).textContent = '';
 }
 
-function validateEmail(val) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+function setLoading(loading) {
+  submitBtn.disabled = loading;
+  spinner.hidden = !loading;
+  btnText.textContent = loading ? (isRegisterMode ? 'Creating account…' : 'Signing in…') : (isRegisterMode ? 'Create account' : 'Sign in');
 }
 
-emailInput.addEventListener('input', () =>
-  clearError(emailInput, document.getElementById('emailError'))
-);
+function firebaseError(code) {
+  const map = {
+    'auth/user-not-found':       'No account found with this email.',
+    'auth/wrong-password':       'Incorrect password. Try again.',
+    'auth/invalid-email':        'Enter a valid email address.',
+    'auth/email-already-in-use': 'An account with this email already exists.',
+    'auth/weak-password':        'Password must be at least 6 characters.',
+    'auth/too-many-requests':    'Too many attempts. Please wait a moment.',
+    'auth/popup-closed-by-user': 'Sign-in popup was closed.',
+    'auth/network-request-failed': 'Network error. Check your connection.',
+    'auth/invalid-credential':   'Invalid email or password.',
+  };
+  return map[code] || 'Something went wrong. Please try again.';
+}
 
-pwInput.addEventListener('input', () =>
-  clearError(pwInput, document.getElementById('passwordError'))
-);
+// ── Toggle login / register ───────────────────────────────
+
+toggleMode.addEventListener('click', (e) => {
+  e.preventDefault();
+  clearAlert();
+  isRegisterMode = !isRegisterMode;
+
+  if (isRegisterMode) {
+    formTitle.textContent    = 'Create account';
+    formSubtitle.textContent = 'Sign up to get started for free';
+    btnText.textContent      = 'Create account';
+    nameField.hidden         = false;
+    rememberRow.hidden       = true;
+    forgotLink.hidden        = true;
+    togglePrompt.textContent = 'Already have an account?';
+    toggleMode.textContent   = 'Sign in';
+  } else {
+    formTitle.textContent    = 'Welcome back';
+    formSubtitle.textContent = 'Sign in to your account to continue';
+    btnText.textContent      = 'Sign in';
+    nameField.hidden         = true;
+    rememberRow.hidden       = false;
+    forgotLink.hidden        = false;
+    togglePrompt.textContent = "Don't have an account?";
+    toggleMode.textContent   = 'Create one free';
+  }
+});
+
+// ── Forgot password ───────────────────────────────────────
+
+forgotLink.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const email = emailInput.value.trim();
+  if (!email) {
+    showAlert('Enter your email above, then tap "Forgot password?".');
+    return;
+  }
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showAlert('Password reset email sent! Check your inbox.', 'success');
+  } catch (err) {
+    showAlert(firebaseError(err.code));
+  }
+});
+
+// ── Clear errors on input ─────────────────────────────────
+
+emailInput.addEventListener('input', () => { clearFieldError(emailInput, 'emailError'); clearAlert(); });
+pwInput.addEventListener('input',    () => { clearFieldError(pwInput, 'passwordError'); clearAlert(); });
+nameInput.addEventListener('input',  () => { clearFieldError(nameInput, 'nameError'); clearAlert(); });
+
+// ── Form submit ───────────────────────────────────────────
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  clearAlert();
 
-  const emailErr = document.getElementById('emailError');
-  const pwErr    = document.getElementById('passwordError');
   let valid = true;
+  const email = emailInput.value.trim();
+  const pw    = pwInput.value;
+  const name  = nameInput.value.trim();
 
-  clearError(emailInput, emailErr);
-  clearError(pwInput, pwErr);
+  clearFieldError(emailInput, 'emailError');
+  clearFieldError(pwInput, 'passwordError');
+  clearFieldError(nameInput, 'nameError');
 
-  if (!emailInput.value.trim()) {
-    showError(emailInput, emailErr, 'Email is required.');
-    valid = false;
-  } else if (!validateEmail(emailInput.value.trim())) {
-    showError(emailInput, emailErr, 'Enter a valid email address.');
-    valid = false;
-  }
-
-  if (!pwInput.value) {
-    showError(pwInput, pwErr, 'Password is required.');
-    valid = false;
-  } else if (pwInput.value.length < 6) {
-    showError(pwInput, pwErr, 'Password must be at least 6 characters.');
+  if (isRegisterMode && !name) {
+    showFieldError(nameInput, 'nameError', 'Name is required.');
     valid = false;
   }
-
+  if (!email) {
+    showFieldError(emailInput, 'emailError', 'Email is required.');
+    valid = false;
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showFieldError(emailInput, 'emailError', 'Enter a valid email address.');
+    valid = false;
+  }
+  if (!pw) {
+    showFieldError(pwInput, 'passwordError', 'Password is required.');
+    valid = false;
+  } else if (pw.length < 6) {
+    showFieldError(pwInput, 'passwordError', 'Password must be at least 6 characters.');
+    valid = false;
+  }
   if (!valid) return;
 
-  // Simulate async sign-in
-  submitBtn.disabled = true;
-  btnText.textContent = 'Signing in…';
-  spinner.hidden = false;
-
-  await new Promise(r => setTimeout(r, 1800));
-
-  spinner.hidden = true;
-  btnText.textContent = 'Signed in!';
-  submitBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-  submitBtn.style.boxShadow  = '0 4px 20px rgba(16,185,129,0.45)';
+  setLoading(true);
+  try {
+    if (isRegisterMode) {
+      const cred = await auth.createUserWithEmailAndPassword(email, pw);
+      await cred.user.updateProfile({ displayName: name });
+    } else {
+      const persistence = document.getElementById('remember').checked
+        ? firebase.auth.Auth.Persistence.LOCAL
+        : firebase.auth.Auth.Persistence.SESSION;
+      await auth.setPersistence(persistence);
+      await auth.signInWithEmailAndPassword(email, pw);
+    }
+    // onAuthStateChanged will redirect to dashboard
+  } catch (err) {
+    showAlert(firebaseError(err.code));
+    setLoading(false);
+  }
 });
+
+// ── Social sign-in ────────────────────────────────────────
+
+async function socialSignIn(provider) {
+  clearAlert();
+  try {
+    await auth.signInWithPopup(provider);
+    // onAuthStateChanged handles redirect
+  } catch (err) {
+    if (err.code !== 'auth/popup-closed-by-user') {
+      showAlert(firebaseError(err.code));
+    }
+  }
+}
+
+document.getElementById('googleBtn').addEventListener('click', () => socialSignIn(googleProvider));
+document.getElementById('githubBtn').addEventListener('click', () => socialSignIn(githubProvider));
+
+// ── Password toggle ───────────────────────────────────────
 
 function togglePassword() {
   const isText = pwInput.type === 'text';

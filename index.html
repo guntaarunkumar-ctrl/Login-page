@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- Animated background blobs -->
   <div class="bg">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
@@ -24,21 +23,36 @@
           <path d="M18 12L24 15.5V22.5L18 26L12 22.5V15.5L18 12Z" fill="url(#gradient2)"/>
           <defs>
             <linearGradient id="gradient" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#8b5cf6"/>
+              <stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/>
             </linearGradient>
             <linearGradient id="gradient2" x1="12" y1="12" x2="24" y2="26" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#a78bfa"/>
+              <stop stop-color="#6366f1"/><stop offset="1" stop-color="#a78bfa"/>
             </linearGradient>
           </defs>
         </svg>
       </div>
-      <h1>Welcome back</h1>
-      <p>Sign in to your account to continue</p>
+      <h1 id="formTitle">Welcome back</h1>
+      <p id="formSubtitle">Sign in to your account to continue</p>
     </div>
 
+    <!-- Global error banner -->
+    <div class="alert" id="alertBox" hidden></div>
+
     <form class="form" id="loginForm" novalidate>
+      <!-- Name field — register only -->
+      <div class="field" id="nameField" hidden>
+        <label for="name">Full name</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </span>
+          <input type="text" id="name" name="name" placeholder="John Doe" autocomplete="name" />
+        </div>
+        <span class="error-msg" id="nameError"></span>
+      </div>
+
       <div class="field">
         <label for="email">Email address</label>
         <div class="input-wrap">
@@ -56,7 +70,7 @@
       <div class="field">
         <label for="password">
           Password
-          <a href="#" class="forgot-link">Forgot password?</a>
+          <a href="#" class="forgot-link" id="forgotLink">Forgot password?</a>
         </label>
         <div class="input-wrap">
           <span class="input-icon">
@@ -76,7 +90,7 @@
         <span class="error-msg" id="passwordError"></span>
       </div>
 
-      <div class="remember-row">
+      <div class="remember-row" id="rememberRow">
         <label class="checkbox-label">
           <input type="checkbox" id="remember" />
           <span class="checkmark"></span>
@@ -96,7 +110,7 @@
       <div class="divider"><span>or continue with</span></div>
 
       <div class="social-row">
-        <button type="button" class="btn-social" aria-label="Sign in with Google">
+        <button type="button" class="btn-social" id="googleBtn" aria-label="Sign in with Google">
           <svg width="20" height="20" viewBox="0 0 48 48">
             <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 32.8 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C33.8 6.5 29.2 4.5 24 4.5 12.7 4.5 3.5 13.7 3.5 25S12.7 45.5 24 45.5c10.5 0 19.5-7.6 19.5-20.5 0-1.4-.1-2.7-.4-4l-.5-.5z"/>
             <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 12.5 24 12.5c3 0 5.7 1.1 7.8 2.9l5.7-5.7C33.8 6.5 29.2 4.5 24 4.5c-7.7 0-14.3 4.4-17.7 10.2z"/>
@@ -105,7 +119,7 @@
           </svg>
           Google
         </button>
-        <button type="button" class="btn-social" aria-label="Sign in with GitHub">
+        <button type="button" class="btn-social" id="githubBtn" aria-label="Sign in with GitHub">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
           </svg>
@@ -115,10 +129,15 @@
     </form>
 
     <p class="signup-prompt">
-      Don't have an account? <a href="#">Create one free</a>
+      <span id="togglePromptText">Don't have an account?</span>
+      <a href="#" id="toggleMode">Create one free</a>
     </p>
   </div>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
