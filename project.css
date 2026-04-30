@@ -282,10 +282,13 @@ body {
   gap: 0.5rem;
   width: 100%;
   padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 0.875rem;
   text-decoration: none;
+  cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 

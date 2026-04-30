@@ -3,9 +3,10 @@ firebase.auth().onAuthStateChanged(user => {
   if (!user) window.location.href = 'index.html';
 });
 
-document.getElementById('signOutBtn').addEventListener('click', async () => {
-  await firebase.auth().signOut();
-  window.location.href = 'index.html';
+document.getElementById('signOutBtn').addEventListener('click', () => {
+  firebase.auth().signOut()
+    .catch(() => {})
+    .finally(() => { window.location.href = 'index.html'; });
 });
 
 const sidebar   = document.getElementById('sidebar');
