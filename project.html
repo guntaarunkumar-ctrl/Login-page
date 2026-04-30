@@ -148,8 +148,8 @@
         </div>
       </header>
 
-      <div class="content-area">
-        <div class="coming-soon">
+      <div class="content-area" id="contentArea">
+        <div class="coming-soon" id="comingSoon">
           <div class="cs-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
@@ -159,6 +159,36 @@
           <h2 class="cs-title" id="csTitle">Schedules</h2>
           <p class="cs-text">This section is coming soon.</p>
           <span class="cs-badge">In Development</span>
+        </div>
+
+        <!-- Pictorial progress view -->
+        <div class="pictorial-view" id="pictorialView">
+          <div class="pictorial-toolbar">
+            <div class="pictorial-brush-wrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                <path d="M2 2l7.586 7.586"/>
+                <circle cx="11" cy="11" r="2"/>
+              </svg>
+              <span class="pictorial-brush-label">Brush</span>
+              <input type="range" id="brushSize" class="pictorial-slider" min="10" max="70" value="30" />
+            </div>
+            <button id="clearCanvas" class="btn-clear-canvas">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+              </svg>
+              Clear
+            </button>
+          </div>
+
+          <div class="pictorial-wrap" id="pictorialWrap">
+            <img id="floorPlanImg" src="floorplan.png" alt="Floor Plan" draggable="false" />
+            <canvas id="progressCanvas"></canvas>
+          </div>
+
+          <p class="pictorial-hint">Swipe over any room or area to mark it as complete</p>
         </div>
       </div>
     </main>

@@ -82,16 +82,85 @@ function setActiveTab(tabName) {
   csTitle.textContent = tabName;
   document.getElementById('pageTitle').textContent = tabName;
 
-  // Re-trigger fade animation
-  const cs = document.querySelector('.coming-soon');
-  cs.style.animation = 'none';
-  cs.offsetHeight;                    // reflow
-  cs.style.animation = '';
+  const isPictorial   = tabName === 'Pictorial';
+  const comingSoon    = document.getElementById('comingSoon');
+  const pictorialView = document.getElementById('pictorialView');
+  const contentArea   = document.getElementById('contentArea');
 
-  // On mobile close sidebar after selection
+  comingSoon.style.display    = isPictorial ? 'none'  : '';
+  pictorialView.style.display = isPictorial ? 'flex'  : 'none';
+  contentArea.classList.toggle('pictorial-active', isPictorial);
+
+  if (isPictorial) {
+    syncCanvas();
+  } else {
+    comingSoon.style.animation = 'none';
+    comingSoon.offsetHeight;
+    comingSoon.style.animation = '';
+  }
+
   if (window.innerWidth <= 768) closeSidebar();
 }
 
 navItems.forEach(item => {
   item.addEventListener('click', () => setActiveTab(item.dataset.tab));
+});
+
+// ── Pictorial canvas ─────────────────────────────────────────────
+const progressCanvas = document.getElementById('progressCanvas');
+const floorPlanImg   = document.getElementById('floorPlanImg');
+let isPainting = false;
+
+function syncCanvas() {
+  if (!floorPlanImg.clientWidth) return;
+  progressCanvas.width  = floorPlanImg.clientWidth;
+  progressCanvas.height = floorPlanImg.clientHeight;
+}
+
+function getBrushRadius() {
+  return parseInt(document.getElementById('brushSize').value, 10);
+}
+
+function getPaintPos(e) {
+  const rect = progressCanvas.getBoundingClientRect();
+  const scaleX = progressCanvas.width  / rect.width;
+  const scaleY = progressCanvas.height / rect.height;
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+}
+
+function doPaint(e) {
+  if (!isPainting) return;
+  e.preventDefault();
+  const ctx = progressCanvas.getContext('2d');
+  const { x, y } = getPaintPos(e);
+  const r = getBrushRadius();
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+  grad.addColorStop(0,   '#22c55e');
+  grad.addColorStop(0.6, '#22c55e');
+  grad.addColorStop(1,   'rgba(34,197,94,0)');
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+progressCanvas.addEventListener('mousedown',  (e) => { isPainting = true; doPaint(e); });
+progressCanvas.addEventListener('mousemove',  doPaint);
+progressCanvas.addEventListener('mouseup',    () => isPainting = false);
+progressCanvas.addEventListener('mouseleave', () => isPainting = false);
+progressCanvas.addEventListener('touchstart', (e) => { isPainting = true; doPaint(e); }, { passive: false });
+progressCanvas.addEventListener('touchmove',  doPaint, { passive: false });
+progressCanvas.addEventListener('touchend',   () => isPainting = false);
+
+document.getElementById('clearCanvas').addEventListener('click', () => {
+  progressCanvas.getContext('2d').clearRect(0, 0, progressCanvas.width, progressCanvas.height);
+});
+
+floorPlanImg.addEventListener('load', syncCanvas);
+if (floorPlanImg.complete) syncCanvas();
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('pictorialView').style.display !== 'none') syncCanvas();
 });
