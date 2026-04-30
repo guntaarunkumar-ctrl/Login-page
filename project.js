@@ -108,17 +108,27 @@ navItems.forEach(item => {
 });
 
 // ── Pictorial canvas ─────────────────────────────────────────────
-const progressCanvas  = document.getElementById('progressCanvas');
-const floorPlanImg    = document.getElementById('floorPlanImg');
-const uploadArea      = document.getElementById('uploadArea');
-const pictorialWrap   = document.getElementById('pictorialWrap');
+const progressCanvas   = document.getElementById('progressCanvas');
+const floorPlanImg     = document.getElementById('floorPlanImg');
+const uploadArea       = document.getElementById('uploadArea');
+const pictorialWrap    = document.getElementById('pictorialWrap');
 const pictorialToolbar = document.getElementById('pictorialToolbar');
-const pictorialHint   = document.getElementById('pictorialHint');
-const floorPlanInput  = document.getElementById('floorPlanInput');
-let isPainting = false;
+const pictorialHint    = document.getElementById('pictorialHint');
+const floorPlanInput   = document.getElementById('floorPlanInput');
+
+let isPainting   = false;
+let isEraser     = false;
+let currentColor = '#22c55e';
+const undoStack  = [];
+const MAX_UNDO   = 15;
+
+function hexToRgb(hex) {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
 
 function syncCanvas() {
   if (!floorPlanImg.clientWidth) return;
+  undoStack.length = 0;
   progressCanvas.width  = floorPlanImg.clientWidth;
   progressCanvas.height = floorPlanImg.clientHeight;
 }
@@ -133,6 +143,18 @@ function restoreProgress() {
   const img = new Image();
   img.onload = () => progressCanvas.getContext('2d').drawImage(img, 0, 0, progressCanvas.width, progressCanvas.height);
   img.src = saved;
+}
+
+function pushUndo() {
+  if (!progressCanvas.width) return;
+  undoStack.push(progressCanvas.getContext('2d').getImageData(0, 0, progressCanvas.width, progressCanvas.height));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  progressCanvas.getContext('2d').putImageData(undoStack.pop(), 0, 0);
+  saveProgress();
 }
 
 function showFloorPlan() {
@@ -174,32 +196,70 @@ function doPaint(e) {
   const ctx = progressCanvas.getContext('2d');
   const { x, y } = getPaintPos(e);
   const r = getBrushRadius();
-  const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-  grad.addColorStop(0,   '#22c55e');
-  grad.addColorStop(0.6, '#22c55e');
-  grad.addColorStop(1,   'rgba(34,197,94,0)');
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
-  ctx.fill();
+  if (isEraser) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0,   'rgba(0,0,0,1)');
+    g.addColorStop(0.7, 'rgba(0,0,0,1)');
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  } else {
+    const [r2,g2,b2] = hexToRgb(currentColor);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0,   currentColor);
+    g.addColorStop(0.6, currentColor);
+    g.addColorStop(1,   `rgba(${r2},${g2},${b2},0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+}
+
+function setEraser(active) {
+  isEraser = active;
+  document.getElementById('eraserBtn').classList.toggle('active', active);
+  progressCanvas.style.cursor = active ? 'cell' : 'crosshair';
 }
 
 // Paint events
-progressCanvas.addEventListener('mousedown',  (e) => { isPainting = true; doPaint(e); });
+progressCanvas.addEventListener('mousedown',  (e) => { pushUndo(); isPainting = true; doPaint(e); });
 progressCanvas.addEventListener('mousemove',  doPaint);
 progressCanvas.addEventListener('mouseup',    () => { isPainting = false; saveProgress(); });
 progressCanvas.addEventListener('mouseleave', () => isPainting = false);
-progressCanvas.addEventListener('touchstart', (e) => { isPainting = true; doPaint(e); }, { passive: false });
+progressCanvas.addEventListener('touchstart', (e) => { pushUndo(); isPainting = true; doPaint(e); }, { passive: false });
 progressCanvas.addEventListener('touchmove',  doPaint, { passive: false });
 progressCanvas.addEventListener('touchend',   () => { isPainting = false; saveProgress(); });
 
+// Colour swatches
+document.querySelectorAll('.color-swatch').forEach(swatch => {
+  swatch.addEventListener('click', () => {
+    currentColor = swatch.dataset.color;
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    swatch.classList.add('active');
+    setEraser(false);
+  });
+});
+
+// Eraser toggle
+document.getElementById('eraserBtn').addEventListener('click', () => setEraser(!isEraser));
+
+// Undo button + Ctrl+Z
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+});
+
 // Clear button
 document.getElementById('clearCanvas').addEventListener('click', () => {
+  undoStack.length = 0;
   progressCanvas.getContext('2d').clearRect(0, 0, progressCanvas.width, progressCanvas.height);
   localStorage.removeItem('pictorialProgress');
 });
 
-// File input change
+// File input
 floorPlanInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -209,7 +269,7 @@ floorPlanInput.addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-// Change image button
+// Change image
 document.getElementById('changeImg').addEventListener('click', () => {
   localStorage.removeItem('pictorialProgress');
   floorPlanInput.click();
