@@ -5,21 +5,31 @@ firebase.auth().onAuthStateChanged(user => {
   const name = user.displayName || user.email.split('@')[0];
 
   document.getElementById('userName').textContent = name;
+  document.getElementById('topbarUserName').textContent = name;
 
   const lastLogin = user.metadata.lastSignInTime;
   if (lastLogin) {
-    document.getElementById('userLastLogin').textContent =
-      'Last login: ' + new Date(lastLogin).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    const formatted = new Date(lastLogin).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    document.getElementById('userLastLogin').textContent = 'Last login: ' + formatted;
+    document.getElementById('topbarUserDate').textContent = formatted;
   }
 
   const avatarEl = document.getElementById('userAvatar');
+  const topbarAvatarEl = document.getElementById('topbarUserAvatar');
   if (user.photoURL) {
     const img = document.createElement('img');
     img.src = user.photoURL;
     img.alt = name;
     avatarEl.appendChild(img);
+
+    const img2 = document.createElement('img');
+    img2.src = user.photoURL;
+    img2.alt = name;
+    topbarAvatarEl.appendChild(img2);
   } else {
-    avatarEl.textContent = name.charAt(0).toUpperCase();
+    const initial = name.charAt(0).toUpperCase();
+    avatarEl.textContent = initial;
+    topbarAvatarEl.textContent = initial;
   }
 });
 
