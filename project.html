@@ -26,6 +26,13 @@
     </div>
   </header>
 
+  <!-- Floating expand button (desktop, shown when sidebar collapsed) -->
+  <button class="btn-expand-sidebar" id="expandSidebarBtn" title="Expand sidebar" aria-label="Expand sidebar" style="display:none">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  </button>
+
   <div class="layout">
 
     <!-- Sidebar overlay (mobile) -->
@@ -36,6 +43,11 @@
       <div class="sidebar-header">
         <div class="brand-icon">✦</div>
         <span class="sidebar-title">Project Hub</span>
+        <button class="btn-collapse-sidebar" id="collapseSidebarBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
       </div>
 
       <nav class="nav">
@@ -167,13 +179,16 @@
           <!-- Toolbar: hidden until an image is loaded -->
           <div class="pictorial-toolbar" id="pictorialToolbar" style="display:none">
             <div class="toolbar-group">
-              <!-- Colour swatches -->
-              <div class="color-swatches">
-                <button class="color-swatch active" data-color="#22c55e" style="background:#22c55e" title="Green – Complete"></button>
-                <button class="color-swatch" data-color="#eab308" style="background:#eab308" title="Yellow – In Progress"></button>
-                <button class="color-swatch" data-color="#f97316" style="background:#f97316" title="Orange – Partial"></button>
-                <button class="color-swatch" data-color="#ef4444" style="background:#ef4444" title="Red – Issue"></button>
-                <button class="color-swatch" data-color="#3b82f6" style="background:#3b82f6" title="Blue – Inspected"></button>
+              <!-- Colour swatches + legend -->
+              <div class="color-legend-wrap">
+                <div class="color-swatches">
+                  <button class="color-swatch active" data-color="#22c55e" style="background:#22c55e" title="Complete"></button>
+                  <button class="color-swatch" data-color="#eab308" style="background:#eab308" title="In Progress"></button>
+                  <button class="color-swatch" data-color="#f97316" style="background:#f97316" title="Partial"></button>
+                  <button class="color-swatch" data-color="#ef4444" style="background:#ef4444" title="Issue"></button>
+                  <button class="color-swatch" data-color="#3b82f6" style="background:#3b82f6" title="Inspected"></button>
+                </div>
+                <span class="color-legend" id="colorLegend">Complete</span>
               </div>
               <div class="toolbar-sep"></div>
               <!-- Eraser -->
@@ -241,6 +256,24 @@
       </div>
     </main>
 
+  </div>
+
+  <!-- Clear confirmation modal -->
+  <div class="modal-overlay" id="clearModal">
+    <div class="modal">
+      <div class="modal-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal-title">Clear all progress?</h3>
+      <p class="modal-body">All painted areas will be removed. You can still recover it using the <strong>Undo</strong> button immediately after clearing.</p>
+      <div class="modal-actions">
+        <button id="cancelClearBtn" class="btn-modal-cancel">Cancel</button>
+        <button id="confirmClearBtn" class="btn-modal-danger">Yes, clear all</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

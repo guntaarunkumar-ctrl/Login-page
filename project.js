@@ -233,15 +233,32 @@ progressCanvas.addEventListener('touchstart', (e) => { pushUndo(); isPainting = 
 progressCanvas.addEventListener('touchmove',  doPaint, { passive: false });
 progressCanvas.addEventListener('touchend',   () => { isPainting = false; saveProgress(); });
 
-// Colour swatches
+// Colour swatches + legend
+const colorLegendEl = document.getElementById('colorLegend');
+const colorNames = {
+  '#22c55e': 'Complete',
+  '#eab308': 'In Progress',
+  '#f97316': 'Partial',
+  '#ef4444': 'Issue',
+  '#3b82f6': 'Inspected',
+};
+
+function updateLegend(color) {
+  colorLegendEl.textContent = colorNames[color] || '';
+}
+
 document.querySelectorAll('.color-swatch').forEach(swatch => {
+  swatch.addEventListener('mouseenter', () => updateLegend(swatch.dataset.color));
+  swatch.addEventListener('mouseleave', () => updateLegend(currentColor));
   swatch.addEventListener('click', () => {
     currentColor = swatch.dataset.color;
     document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
     swatch.classList.add('active');
+    updateLegend(currentColor);
     setEraser(false);
   });
 });
+updateLegend(currentColor);
 
 // Eraser toggle
 document.getElementById('eraserBtn').addEventListener('click', () => setEraser(!isEraser));
@@ -252,11 +269,22 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
 });
 
-// Clear button
+// Clear button — show confirmation modal
+const clearModal = document.getElementById('clearModal');
 document.getElementById('clearCanvas').addEventListener('click', () => {
-  undoStack.length = 0;
+  clearModal.classList.add('show');
+});
+document.getElementById('cancelClearBtn').addEventListener('click', () => {
+  clearModal.classList.remove('show');
+});
+document.getElementById('confirmClearBtn').addEventListener('click', () => {
+  clearModal.classList.remove('show');
+  pushUndo(); // save current state so Undo can restore it
   progressCanvas.getContext('2d').clearRect(0, 0, progressCanvas.width, progressCanvas.height);
   localStorage.removeItem('pictorialProgress');
+});
+clearModal.addEventListener('click', (e) => {
+  if (e.target === clearModal) clearModal.classList.remove('show');
 });
 
 // File input
@@ -296,3 +324,31 @@ if (savedSrc) loadFloorPlan(savedSrc);
 window.addEventListener('resize', () => {
   if (document.getElementById('pictorialView').style.display !== 'none' && floorPlanImg.src) syncCanvas();
 });
+
+// ── Sidebar collapse (desktop) ───────────────────────────────────
+const expandSidebarBtn = document.getElementById('expandSidebarBtn');
+const mainEl = document.getElementById('main');
+
+function collapseSidebar() {
+  sidebar.classList.add('desktop-collapsed');
+  mainEl.classList.add('desktop-collapsed');
+  expandSidebarBtn.style.display = 'flex';
+  localStorage.setItem('sidebarCollapsed', '1');
+}
+
+function expandSidebar() {
+  sidebar.classList.remove('desktop-collapsed');
+  mainEl.classList.remove('desktop-collapsed');
+  expandSidebarBtn.style.display = 'none';
+  localStorage.removeItem('sidebarCollapsed');
+}
+
+document.getElementById('collapseSidebarBtn').addEventListener('click', collapseSidebar);
+expandSidebarBtn.addEventListener('click', expandSidebar);
+
+// Restore sidebar state from previous session (desktop only)
+if (localStorage.getItem('sidebarCollapsed') && window.innerWidth > 768) {
+  sidebar.classList.add('desktop-collapsed');
+  mainEl.classList.add('desktop-collapsed');
+  expandSidebarBtn.style.display = 'flex';
+}
