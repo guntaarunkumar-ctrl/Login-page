@@ -1,6 +1,26 @@
-// Auth guard — redirect to login if not signed in
+// Auth guard + populate user info
 firebase.auth().onAuthStateChanged(user => {
-  if (!user) window.location.href = 'index.html';
+  if (!user) { window.location.href = 'index.html'; return; }
+
+  const name = user.displayName || user.email.split('@')[0];
+
+  document.getElementById('userName').textContent = name;
+
+  const lastLogin = user.metadata.lastSignInTime;
+  if (lastLogin) {
+    document.getElementById('userLastLogin').textContent =
+      'Last login: ' + new Date(lastLogin).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  const avatarEl = document.getElementById('userAvatar');
+  if (user.photoURL) {
+    const img = document.createElement('img');
+    img.src = user.photoURL;
+    img.alt = name;
+    avatarEl.appendChild(img);
+  } else {
+    avatarEl.textContent = name.charAt(0).toUpperCase();
+  }
 });
 
 document.getElementById('signOutBtn').addEventListener('click', () => {
@@ -50,6 +70,7 @@ groupBtns.forEach(btn => {
 function setActiveTab(tabName) {
   navItems.forEach(item => item.classList.toggle('active', item.dataset.tab === tabName));
   csTitle.textContent = tabName;
+  document.getElementById('pageTitle').textContent = tabName;
 
   // Re-trigger fade animation
   const cs = document.querySelector('.coming-soon');
