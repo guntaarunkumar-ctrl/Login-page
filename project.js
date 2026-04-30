@@ -93,6 +93,7 @@ function setActiveTab(tabName) {
 
   if (isPictorial) {
     syncCanvas();
+    restoreProgress();
   } else {
     comingSoon.style.animation = 'none';
     comingSoon.offsetHeight;
@@ -107,14 +108,51 @@ navItems.forEach(item => {
 });
 
 // ── Pictorial canvas ─────────────────────────────────────────────
-const progressCanvas = document.getElementById('progressCanvas');
-const floorPlanImg   = document.getElementById('floorPlanImg');
+const progressCanvas  = document.getElementById('progressCanvas');
+const floorPlanImg    = document.getElementById('floorPlanImg');
+const uploadArea      = document.getElementById('uploadArea');
+const pictorialWrap   = document.getElementById('pictorialWrap');
+const pictorialToolbar = document.getElementById('pictorialToolbar');
+const pictorialHint   = document.getElementById('pictorialHint');
+const floorPlanInput  = document.getElementById('floorPlanInput');
 let isPainting = false;
 
 function syncCanvas() {
   if (!floorPlanImg.clientWidth) return;
   progressCanvas.width  = floorPlanImg.clientWidth;
   progressCanvas.height = floorPlanImg.clientHeight;
+}
+
+function saveProgress() {
+  try { localStorage.setItem('pictorialProgress', progressCanvas.toDataURL()); } catch (e) {}
+}
+
+function restoreProgress() {
+  const saved = localStorage.getItem('pictorialProgress');
+  if (!saved) return;
+  const img = new Image();
+  img.onload = () => progressCanvas.getContext('2d').drawImage(img, 0, 0, progressCanvas.width, progressCanvas.height);
+  img.src = saved;
+}
+
+function showFloorPlan() {
+  uploadArea.style.display       = 'none';
+  pictorialWrap.style.display    = '';
+  pictorialToolbar.style.display = '';
+  pictorialHint.style.display    = '';
+  syncCanvas();
+  restoreProgress();
+}
+
+function loadFloorPlan(src) {
+  function onReady() {
+    floorPlanImg.onload = null;
+    showFloorPlan();
+    try { localStorage.setItem('floorPlanSrc', src); } catch (e) {}
+  }
+  floorPlanImg.onload = onReady;
+  floorPlanImg.src = src;
+  if (floorPlanImg.complete && floorPlanImg.naturalWidth) onReady();
 }
 
 function getBrushRadius() {
@@ -146,21 +184,55 @@ function doPaint(e) {
   ctx.fill();
 }
 
+// Paint events
 progressCanvas.addEventListener('mousedown',  (e) => { isPainting = true; doPaint(e); });
 progressCanvas.addEventListener('mousemove',  doPaint);
-progressCanvas.addEventListener('mouseup',    () => isPainting = false);
+progressCanvas.addEventListener('mouseup',    () => { isPainting = false; saveProgress(); });
 progressCanvas.addEventListener('mouseleave', () => isPainting = false);
 progressCanvas.addEventListener('touchstart', (e) => { isPainting = true; doPaint(e); }, { passive: false });
 progressCanvas.addEventListener('touchmove',  doPaint, { passive: false });
-progressCanvas.addEventListener('touchend',   () => isPainting = false);
+progressCanvas.addEventListener('touchend',   () => { isPainting = false; saveProgress(); });
 
+// Clear button
 document.getElementById('clearCanvas').addEventListener('click', () => {
   progressCanvas.getContext('2d').clearRect(0, 0, progressCanvas.width, progressCanvas.height);
+  localStorage.removeItem('pictorialProgress');
 });
 
-floorPlanImg.addEventListener('load', syncCanvas);
-if (floorPlanImg.complete) syncCanvas();
+// File input change
+floorPlanInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => loadFloorPlan(ev.target.result);
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+// Change image button
+document.getElementById('changeImg').addEventListener('click', () => {
+  localStorage.removeItem('pictorialProgress');
+  floorPlanInput.click();
+});
+
+// Drag and drop
+uploadArea.addEventListener('dragover',  (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', ()  => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (ev) => loadFloorPlan(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+});
+
+// Restore saved floor plan from previous session
+const savedSrc = localStorage.getItem('floorPlanSrc');
+if (savedSrc) loadFloorPlan(savedSrc);
 
 window.addEventListener('resize', () => {
-  if (document.getElementById('pictorialView').style.display !== 'none') syncCanvas();
+  if (document.getElementById('pictorialView').style.display !== 'none' && floorPlanImg.src) syncCanvas();
 });
