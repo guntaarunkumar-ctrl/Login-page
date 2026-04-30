@@ -24,7 +24,7 @@ let isRegisterMode = false;
 
 // Redirect if already signed in
 auth.onAuthStateChanged(user => {
-  if (user) window.location.href = 'dashboard.html';
+  if (user) window.location.href = 'project.html';
 });
 
 // ── Helpers ──────────────────────────────────────────────

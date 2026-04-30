@@ -1,3 +1,13 @@
+// Auth guard — redirect to login if not signed in
+firebase.auth().onAuthStateChanged(user => {
+  if (!user) window.location.href = 'index.html';
+});
+
+document.getElementById('signOutBtn').addEventListener('click', async () => {
+  await firebase.auth().signOut();
+  window.location.href = 'index.html';
+});
+
 const sidebar   = document.getElementById('sidebar');
 const overlay   = document.getElementById('overlay');
 const burger    = document.getElementById('burger');
