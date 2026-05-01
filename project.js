@@ -235,7 +235,7 @@ function buildFloorHTML(id, name) {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/>
       </svg>
-      <span class="floor-title">${name}</span>
+      <input class="floor-title" value="${name}" data-id="${id}" title="Click to rename" />
     </div>
     <div class="floor-btns">
       <button class="btn-tool btn-floor-change" data-id="${id}" title="Change image">
@@ -302,6 +302,13 @@ function wireFloorEvents(id) {
     }
   });
 
+  // Editable title
+  const titleInput = document.querySelector(`.floor-title[data-id="${id}"]`);
+  titleInput.addEventListener('change', () => {
+    const f = floorList.find(f => f.id === id);
+    if (f) { f.name = titleInput.value.trim() || `Section ${id}`; titleInput.value = f.name; saveFloorList(); }
+  });
+
   // Change button
   document.querySelector(`.btn-floor-change[data-id="${id}"]`).addEventListener('click', () => {
     localStorage.removeItem(`pictorial_progress_${id}`);
@@ -323,7 +330,7 @@ function wireFloorEvents(id) {
 function addFloor(id, name, restoreData) {
   const maxId = floorList.reduce((m, f) => Math.max(m, f.id), 0);
   id   = id   || maxId + 1;
-  name = name || `Floor ${id}`;
+  name = name || `Section ${id}`;
   floorList.push({ id, name });
   document.getElementById('floorsContainer').insertAdjacentHTML('beforeend', buildFloorHTML(id, name));
   wireFloorEvents(id);

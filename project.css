@@ -917,6 +917,19 @@ body {
   font-weight: 700;
   color: var(--text);
   letter-spacing: 0.01em;
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  padding: 0;
+  min-width: 60px;
+  width: auto;
+  max-width: 160px;
+  cursor: text;
+  font-family: inherit;
+}
+.floor-title:focus {
+  border-bottom-color: var(--accent-light);
 }
 
 .floor-btns {
