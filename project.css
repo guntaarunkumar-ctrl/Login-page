@@ -252,6 +252,7 @@ body {
 .nav-group-header .nav-group-btn {
   flex: 1;
   min-width: 0;
+  width: auto; /* override the width:100% from .nav-group-btn */
 }
 
 /* + button next to group header */

@@ -344,7 +344,7 @@ function savePageList() {
   } catch(e) {}
 }
 
-function setActivePage(pageId) {
+function setActivePage(pageId, keepSidebar) {
   activePageId = pageId;
   activeCanvas = null;
 
@@ -370,7 +370,7 @@ function setActivePage(pageId) {
     syncPageCanvas(pageId);
   }
 
-  if (window.innerWidth <= 768) closeSidebar();
+  if (!keepSidebar && window.innerWidth <= 768) closeSidebar();
 }
 
 function addPage(pageId, pageName, restore) {
@@ -432,10 +432,40 @@ clearModal.addEventListener('click', e => { if (e.target === clearModal) clearMo
 document.getElementById('addPictorialPageBtn').addEventListener('click', e => {
   e.stopPropagation();
   const newId = addPage();
-  setActivePage(newId);
+  setActivePage(newId, true); // keep sidebar open so user sees the new page
   const groupBtn = document.querySelector('.nav-group-btn[data-group="pictorial"]');
   if (groupBtn && groupBtn.getAttribute('aria-expanded') === 'false') groupBtn.click();
 });
+
+// ── Migrate old localStorage format ──────────────────────────────────
+(function migrateOldData() {
+  if (localStorage.getItem('pict_pages')) return; // already new format
+  const oldImg = localStorage.getItem('floorPlanSrc');
+  if (!oldImg) return;
+
+  const pages = [];
+  // Migrate main section (section 1)
+  const name1 = localStorage.getItem('p_sec1_name') || 'Section 1';
+  pages.push({ id: 1, name: name1 });
+  localStorage.setItem('pp_img_1', oldImg);
+  const prog1 = localStorage.getItem('pictorialProgress');
+  if (prog1) { localStorage.setItem('pp_1', prog1); localStorage.removeItem('pictorialProgress'); }
+  localStorage.removeItem('floorPlanSrc');
+
+  // Migrate dynamically created sections (section 2, 3, ...)
+  let sid = 2;
+  while (localStorage.getItem('p_img_' + sid)) {
+    const secName = localStorage.getItem('p_sec' + sid + '_name') || ('Section ' + sid);
+    pages.push({ id: sid, name: secName });
+    localStorage.setItem('pp_img_' + sid, localStorage.getItem('p_img_' + sid));
+    const sp = localStorage.getItem('p_prog_' + sid);
+    if (sp) { localStorage.setItem('pp_' + sid, sp); localStorage.removeItem('p_prog_' + sid); }
+    localStorage.removeItem('p_img_' + sid);
+    sid++;
+  }
+
+  localStorage.setItem('pict_pages', JSON.stringify(pages));
+})();
 
 // ── Restore from localStorage ─────────────────────────────────────────
 const savedPages = localStorage.getItem('pict_pages');
