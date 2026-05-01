@@ -470,9 +470,10 @@ body {
 .main {
   flex: 1;
   margin-left: var(--sidebar-w);
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .content-area {
@@ -481,6 +482,8 @@ body {
   align-items: center;
   justify-content: center;
   padding: clamp(1.5rem, 4vw, 3rem);
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* ── Coming Soon ── */
@@ -540,7 +543,6 @@ body {
   align-items: flex-start;
   justify-content: flex-start;
   padding: 1.25rem 1.5rem;
-  overflow-y: auto;
 }
 
 .pictorial-view {
@@ -975,7 +977,7 @@ body {
 
   .sidebar.open { transform: translateX(0); }
 
-  .main { margin-left: 0; }
+  .main { margin-left: 0; height: calc(100dvh - var(--topbar-h)); }
 
   .main-header { display: none; }
 }
