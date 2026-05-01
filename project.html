@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Hub</title>
+  <link rel="stylesheet" href="project.css" />
+</head>
+<body>
+
+  <!-- Mobile top bar -->
+  <header class="topbar">
+    <button class="burger" id="burger" aria-label="Toggle sidebar">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="topbar-brand">
+      <div class="brand-icon">✦</div>
+      <span>Project Hub</span>
+    </div>
+    <div class="topbar-user">
+      <div class="topbar-user-meta">
+        <span class="topbar-user-name" id="topbarUserName">—</span>
+        <span class="topbar-user-date" id="topbarUserDate">—</span>
+      </div>
+      <div class="user-avatar" id="topbarUserAvatar"></div>
+    </div>
+  </header>
+
+  <!-- Floating expand button (desktop, shown when sidebar collapsed) -->
+  <button class="btn-expand-sidebar" id="expandSidebarBtn" title="Expand sidebar" aria-label="Expand sidebar" style="display:none">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  </button>
+
+  <div class="layout">
+
+    <!-- Sidebar overlay (mobile) -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-icon">✦</div>
+        <span class="sidebar-title">Project Hub</span>
+        <button class="btn-collapse-sidebar" id="collapseSidebarBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="nav">
+
+        <!-- Planning group -->
+        <div class="nav-group" id="group-planning">
+          <button class="nav-group-btn" aria-expanded="true" data-group="planning">
+            <span class="nav-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </span>
+            <span class="nav-label">Planning</span>
+            <span class="chevron">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </span>
+          </button>
+          <div class="nav-children" id="children-planning">
+            <button class="nav-item active" data-tab="Schedules">
+              <span class="nav-dot"></span>Schedules
+            </button>
+            <button class="nav-item" data-tab="Planning Reports">
+              <span class="nav-dot"></span>Planning Reports
+            </button>
+          </div>
+        </div>
+
+        <!-- Tracking group -->
+        <div class="nav-group" id="group-tracking">
+          <button class="nav-group-btn" aria-expanded="false" data-group="tracking">
+            <span class="nav-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                <path d="M13 13l6 6"/>
+              </svg>
+            </span>
+            <span class="nav-label">Tracking</span>
+            <span class="chevron">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </span>
+          </button>
+          <div class="nav-children collapsed" id="children-tracking">
+            <button class="nav-item" data-tab="Pictorial">
+              <span class="nav-dot"></span>Pictorial
+            </button>
+          </div>
+        </div>
+
+        <!-- QS & Billing group -->
+        <div class="nav-group" id="group-qs">
+          <button class="nav-group-btn" aria-expanded="false" data-group="qs">
+            <span class="nav-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </span>
+            <span class="nav-label">QS &amp; Billing</span>
+            <span class="chevron">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </span>
+          </button>
+          <div class="nav-children collapsed" id="children-qs">
+            <button class="nav-item" data-tab="BOQs">
+              <span class="nav-dot"></span>BOQs
+            </button>
+            <button class="nav-item" data-tab="NT Items">
+              <span class="nav-dot"></span>NT Items
+            </button>
+            <button class="nav-item" data-tab="Billing">
+              <span class="nav-dot"></span>Billing
+            </button>
+          </div>
+        </div>
+
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="signOutBtn" class="btn-logout">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main" id="main">
+
+      <!-- Top header with user info -->
+      <header class="main-header">
+        <span class="main-header-title" id="pageTitle">Schedules</span>
+        <div class="user-info">
+          <div class="user-meta">
+            <span class="user-name" id="userName">—</span>
+            <span class="user-last-login" id="userLastLogin">—</span>
+          </div>
+          <div class="user-avatar" id="userAvatar"></div>
+        </div>
+      </header>
+
+      <div class="content-area" id="contentArea">
+        <div class="coming-soon" id="comingSoon">
+          <div class="cs-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <h2 class="cs-title" id="csTitle">Schedules</h2>
+          <p class="cs-text">This section is coming soon.</p>
+          <span class="cs-badge">In Development</span>
+        </div>
+
+        <!-- Pictorial progress view -->
+        <div class="pictorial-view" id="pictorialView">
+
+          <!-- Toolbar: hidden until an image is loaded -->
+          <div class="pictorial-toolbar" id="pictorialToolbar" style="display:none">
+            <div class="toolbar-group">
+              <!-- Colour swatches + legend -->
+              <div class="color-legend-wrap">
+                <div class="color-swatches">
+                  <button class="color-swatch active" data-color="#22c55e" style="background:#22c55e" title="Complete"></button>
+                  <button class="color-swatch" data-color="#eab308" style="background:#eab308" title="In Progress"></button>
+                  <button class="color-swatch" data-color="#f97316" style="background:#f97316" title="Partial"></button>
+                  <button class="color-swatch" data-color="#ef4444" style="background:#ef4444" title="Issue"></button>
+                  <button class="color-swatch" data-color="#3b82f6" style="background:#3b82f6" title="Inspected"></button>
+                </div>
+                <span class="color-legend" id="colorLegend">Complete</span>
+              </div>
+              <div class="toolbar-sep"></div>
+              <!-- Eraser -->
+              <button id="eraserBtn" class="btn-tool" title="Eraser">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
+                  <path d="M22 21H7"/><path d="m5 11 9 9"/>
+                </svg>
+              </button>
+              <!-- Undo -->
+              <button id="undoBtn" class="btn-tool" title="Undo (Ctrl+Z)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 7v6h6"/>
+                  <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                </svg>
+              </button>
+              <div class="toolbar-sep"></div>
+              <!-- Brush size -->
+              <div class="pictorial-brush-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                </svg>
+                <input type="range" id="brushSize" class="pictorial-slider" min="10" max="70" value="30" />
+              </div>
+            </div>
+            <div class="pictorial-actions">
+              <button id="clearCanvas" class="btn-clear-canvas">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                  <path d="M10 11v6"/><path d="M14 11v6"/>
+                </svg>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Floor sections injected by JS -->
+          <div class="floors-container" id="floorsContainer"></div>
+
+          <!-- Add floor button -->
+          <button class="btn-add-floor" id="addFloorBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Floor
+          </button>
+
+          <p class="pictorial-hint" id="pictorialHint">Swipe over any room or area to mark it as complete</p>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Clear confirmation modal -->
+  <div class="modal-overlay" id="clearModal">
+    <div class="modal">
+      <div class="modal-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal-title">Clear all progress?</h3>
+      <p class="modal-body">All painted areas will be removed. You can still recover it using the <strong>Undo</strong> button immediately after clearing.</p>
+      <div class="modal-actions">
+        <button id="cancelClearBtn" class="btn-modal-cancel">Cancel</button>
+        <button id="confirmClearBtn" class="btn-modal-danger">Yes, clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="project.js"></script>
+</body>
+</html>
