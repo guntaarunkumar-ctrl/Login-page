@@ -325,6 +325,190 @@ window.addEventListener('resize', () => {
   if (document.getElementById('pictorialView').style.display !== 'none' && floorPlanImg.src) syncCanvas();
 });
 
+// ── Add Section feature ──────────────────────────────────────────
+let sectionCount = 1;
+
+// Save section-1 name
+document.getElementById('p-sec-name-1').addEventListener('change', function() {
+  if (!this.value.trim()) this.value = 'Section 1';
+  localStorage.setItem('p_sec1_name', this.value);
+});
+const saved1Name = localStorage.getItem('p_sec1_name');
+if (saved1Name) document.getElementById('p-sec-name-1').value = saved1Name;
+
+function createSection(sid, name, savedImg) {
+  // Per-section state
+  let s_painting = false, s_eraser = false, s_color = '#22c55e';
+  const s_undo = [];
+  const COLORS = { '#22c55e':'Complete','#eab308':'In Progress','#f97316':'Partial','#ef4444':'Issue','#3b82f6':'Inspected' };
+
+  // Section wrapper
+  const sec = document.createElement('div');
+  sec.className = 'p-section'; sec.id = 'p-sec-' + sid;
+
+  // Header
+  const hdr = document.createElement('div'); hdr.className = 'p-sec-hdr';
+  const nameEl = document.createElement('input'); nameEl.className = 'p-sec-name'; nameEl.value = name; nameEl.title = 'Click to rename';
+  const removeEl = document.createElement('button'); removeEl.className = 'p-remove-btn'; removeEl.title = 'Remove';
+  removeEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  hdr.appendChild(nameEl); hdr.appendChild(removeEl); sec.appendChild(hdr);
+
+  // Toolbar
+  const tb = document.createElement('div'); tb.className = 'pictorial-toolbar'; tb.style.display = 'none';
+  const tg = document.createElement('div'); tg.className = 'toolbar-group';
+  // swatches
+  const swWrap = document.createElement('div'); swWrap.className = 'color-legend-wrap';
+  const swRow  = document.createElement('div'); swRow.className = 'color-swatches';
+  const lgnd   = document.createElement('span'); lgnd.className = 'color-legend'; lgnd.textContent = 'Complete';
+  const swBtns = Object.entries(COLORS).map(([c, lbl]) => {
+    const b = document.createElement('button');
+    b.className = 'color-swatch' + (c === '#22c55e' ? ' active' : '');
+    b.dataset.color = c; b.style.background = c; b.title = lbl;
+    b.addEventListener('mouseenter', () => lgnd.textContent = lbl);
+    b.addEventListener('mouseleave', () => lgnd.textContent = COLORS[s_color] || '');
+    b.addEventListener('click', () => {
+      s_color = c; s_eraser = false; cvs.style.cursor = 'crosshair';
+      swBtns.forEach(x => x.classList.remove('active')); b.classList.add('active');
+      erasEl.classList.remove('active'); lgnd.textContent = lbl;
+    });
+    swRow.appendChild(b); return b;
+  });
+  swWrap.appendChild(swRow); swWrap.appendChild(lgnd);
+  // eraser
+  const erasEl = document.createElement('button'); erasEl.className = 'btn-tool'; erasEl.title = 'Eraser';
+  erasEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>';
+  erasEl.addEventListener('click', () => { s_eraser = !s_eraser; erasEl.classList.toggle('active', s_eraser); cvs.style.cursor = s_eraser ? 'cell' : 'crosshair'; });
+  // undo
+  const undoEl = document.createElement('button'); undoEl.className = 'btn-tool'; undoEl.title = 'Undo';
+  undoEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>';
+  undoEl.addEventListener('click', doUndo);
+  // brush
+  const bWrap = document.createElement('div'); bWrap.className = 'pictorial-brush-wrap';
+  bWrap.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+  const brushEl = document.createElement('input'); brushEl.type = 'range'; brushEl.className = 'pictorial-slider'; brushEl.min = '10'; brushEl.max = '70'; brushEl.value = '30';
+  bWrap.appendChild(brushEl);
+  // separators
+  const sep1 = document.createElement('div'); sep1.className = 'toolbar-sep';
+  const sep2 = document.createElement('div'); sep2.className = 'toolbar-sep';
+  tg.appendChild(swWrap); tg.appendChild(sep1); tg.appendChild(erasEl); tg.appendChild(undoEl); tg.appendChild(sep2); tg.appendChild(bWrap);
+  // change + clear
+  const acts = document.createElement('div'); acts.className = 'pictorial-actions';
+  const chgEl = document.createElement('button'); chgEl.className = 'btn-change-img';
+  chgEl.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Change';
+  chgEl.addEventListener('click', () => { localStorage.removeItem('p_prog_'+sid); fi.click(); });
+  const clrEl = document.createElement('button'); clrEl.className = 'btn-clear-canvas';
+  clrEl.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Clear';
+  clrEl.addEventListener('click', () => {
+    if (!window.confirm('Clear all progress on this section?')) return;
+    pushU(); cvs.getContext('2d').clearRect(0, 0, cvs.width, cvs.height);
+    localStorage.removeItem('p_prog_'+sid);
+  });
+  acts.appendChild(chgEl); acts.appendChild(clrEl);
+  tb.appendChild(tg); tb.appendChild(acts); sec.appendChild(tb);
+
+  // Upload area
+  const ul = document.createElement('label'); ul.className = 'pictorial-upload-area';
+  ul.innerHTML = '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="upload-title">Upload Floor Plan</span><span class="upload-sub">Tap to select &nbsp;·&nbsp; or drag &amp; drop</span>';
+  const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
+  ul.appendChild(fi);
+
+  // Canvas wrap
+  const wrap = document.createElement('div'); wrap.className = 'pictorial-wrap'; wrap.style.display = 'none';
+  const img  = document.createElement('img'); img.draggable = false;
+  const cvs  = document.createElement('canvas'); cvs.className = 'p-canvas';
+  wrap.appendChild(img); wrap.appendChild(cvs);
+
+  sec.appendChild(ul); sec.appendChild(wrap);
+
+  // Per-section functions
+  function syncC() { if (!img.clientWidth) return; cvs.width = img.clientWidth; cvs.height = img.clientHeight; }
+  function saveProg() { try { localStorage.setItem('p_prog_'+sid, cvs.toDataURL()); } catch(e) {} }
+  function restrProg() {
+    const d = localStorage.getItem('p_prog_'+sid); if (!d) return;
+    const i = new Image(); i.onload = () => cvs.getContext('2d').drawImage(i, 0, 0, cvs.width, cvs.height); i.src = d;
+  }
+  function pushU() { if (!cvs.width) return; s_undo.push(cvs.getContext('2d').getImageData(0,0,cvs.width,cvs.height)); if (s_undo.length > 15) s_undo.shift(); }
+  function doUndo() { if (!s_undo.length) return; cvs.getContext('2d').putImageData(s_undo.pop(), 0, 0); saveProg(); }
+  function showWrap() { ul.style.display = 'none'; wrap.style.display = ''; tb.style.display = ''; syncC(); restrProg(); }
+  function loadImg(src) {
+    function ready() { img.onload = null; showWrap(); try { localStorage.setItem('p_img_'+sid, src); } catch(e) {} saveSections(); }
+    img.onload = ready; img.src = src;
+    if (img.complete && img.naturalWidth) ready();
+  }
+  function getPos(e) {
+    const r = cvs.getBoundingClientRect(), sx = cvs.width/r.width, sy = cvs.height/r.height;
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (cx-r.left)*sx, y: (cy-r.top)*sy };
+  }
+  function paint(e) {
+    if (!s_painting) return; e.preventDefault();
+    const ctx = cvs.getContext('2d'), { x, y } = getPos(e), r = parseInt(brushEl.value, 10);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    if (s_eraser) {
+      const g = ctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,'rgba(0,0,0,1)'); g.addColorStop(0.7,'rgba(0,0,0,1)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = g; ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+    } else {
+      const [r2,g2,b2] = [parseInt(s_color.slice(1,3),16), parseInt(s_color.slice(3,5),16), parseInt(s_color.slice(5,7),16)];
+      const g = ctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,s_color); g.addColorStop(0.6,s_color); g.addColorStop(1,`rgba(${r2},${g2},${b2},0)`);
+      ctx.fillStyle = g; ctx.fill();
+    }
+  }
+
+  // Events
+  cvs.addEventListener('mousedown',  (e) => { pushU(); s_painting = true; paint(e); });
+  cvs.addEventListener('mousemove',  paint);
+  cvs.addEventListener('mouseup',    () => { s_painting = false; saveProg(); });
+  cvs.addEventListener('mouseleave', () => s_painting = false);
+  cvs.addEventListener('touchstart', (e) => { pushU(); s_painting = true; paint(e); }, { passive: false });
+  cvs.addEventListener('touchmove',  paint, { passive: false });
+  cvs.addEventListener('touchend',   () => { s_painting = false; saveProg(); });
+
+  fi.addEventListener('change', (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader(); rd.onload = (ev) => loadImg(ev.target.result); rd.readAsDataURL(f); e.target.value = '';
+  });
+  ul.addEventListener('dragover',  (e) => { e.preventDefault(); ul.classList.add('drag-over'); });
+  ul.addEventListener('dragleave', () => ul.classList.remove('drag-over'));
+  ul.addEventListener('drop', (e) => {
+    e.preventDefault(); ul.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) { const rd = new FileReader(); rd.onload = (ev) => loadImg(ev.target.result); rd.readAsDataURL(f); }
+  });
+  nameEl.addEventListener('change', () => { if (!nameEl.value.trim()) nameEl.value = 'Section '+sid; img.alt = nameEl.value; saveSections(); });
+  removeEl.addEventListener('click', () => { localStorage.removeItem('p_img_'+sid); localStorage.removeItem('p_prog_'+sid); sec.remove(); saveSections(); });
+  window.addEventListener('resize', () => { if (img.src) syncC(); });
+
+  if (savedImg) loadImg(savedImg);
+  return sec;
+}
+
+function saveSections() {
+  const data = [...document.querySelectorAll('.p-section')].map(s => ({
+    id: s.id.replace('p-sec-',''), name: s.querySelector('.p-sec-name').value
+  }));
+  localStorage.setItem('p_sections', JSON.stringify(data));
+}
+
+document.getElementById('addSectionBtn').addEventListener('click', () => {
+  sectionCount++;
+  document.getElementById('extraSections').appendChild(createSection(sectionCount, 'Section ' + sectionCount));
+  saveSections();
+});
+
+// Restore extra sections
+const savedSecs = localStorage.getItem('p_sections');
+if (savedSecs) {
+  try {
+    JSON.parse(savedSecs).forEach(d => {
+      const sid = parseInt(d.id); if (sid > sectionCount) sectionCount = sid;
+      document.getElementById('extraSections').appendChild(createSection(sid, d.name, localStorage.getItem('p_img_'+sid)));
+    });
+  } catch(e) {}
+}
+
 // ── Sidebar collapse (desktop) ───────────────────────────────────
 const expandSidebarBtn = document.getElementById('expandSidebarBtn');
 const mainEl = document.getElementById('main');
