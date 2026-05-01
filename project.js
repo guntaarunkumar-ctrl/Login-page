@@ -407,10 +407,11 @@ function createSection(sid, name, savedImg) {
   tb.appendChild(tg); tb.appendChild(acts); sec.appendChild(tb);
 
   // Upload area
-  const ul = document.createElement('label'); ul.className = 'pictorial-upload-area';
+  const ul = document.createElement('div'); ul.className = 'pictorial-upload-area';
   ul.innerHTML = '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="upload-title">Upload Floor Plan</span><span class="upload-sub">Tap to select &nbsp;·&nbsp; or drag &amp; drop</span>';
   const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.style.display = 'none';
   ul.appendChild(fi);
+  ul.addEventListener('click', () => fi.click());
 
   // Canvas wrap
   const wrap = document.createElement('div'); wrap.className = 'pictorial-wrap'; wrap.style.display = 'none';
