@@ -157,10 +157,13 @@ function undo() {
 function syncPageCanvas(pageId) {
   const img    = document.getElementById(`p-img-${pageId}`);
   const canvas = document.getElementById(`p-cvs-${pageId}`);
-  if (!img || !canvas || !img.clientWidth) return;
+  if (!img || !canvas || !img.clientWidth) return false;
+  // Only reset canvas dimensions when they have actually changed (avoids clearing painted content)
+  if (canvas.width === img.clientWidth && canvas.height === img.clientHeight) return false;
   undoStacks.delete(canvas);
   canvas.width  = img.clientWidth;
   canvas.height = img.clientHeight;
+  return true; // signals that canvas was reset and progress should be restored
 }
 
 function savePageProgress(pageId) {
@@ -192,12 +195,15 @@ function loadPageImage(pageId, src) {
     const actions = document.querySelector(`#pict-page-${pageId} .page-img-actions`);
     if (actions) actions.style.display = 'flex';
     try { localStorage.setItem(`pp_img_${pageId}`, src); } catch(e) {}
-    // Wait one frame for DOM reflow so img.clientWidth is accurate
-    requestAnimationFrame(() => {
-      syncPageCanvas(pageId);
-      restorePageProgress(pageId);
-      activeCanvas = document.getElementById(`p-cvs-${pageId}`);
-    });
+    // If the page is already visible, sync + restore now (new upload while viewing).
+    // If hidden, setActivePage will sync + restore when the user navigates to it.
+    const pageEl = document.getElementById(`pict-page-${pageId}`);
+    if (pageEl && pageEl.style.display !== 'none') {
+      requestAnimationFrame(() => {
+        if (syncPageCanvas(pageId)) restorePageProgress(pageId);
+        activeCanvas = document.getElementById(`p-cvs-${pageId}`);
+      });
+    }
   }
   img.onload = onReady;
   img.src = src;
@@ -380,12 +386,15 @@ function setActivePage(pageId, keepSidebar) {
   const pageEl = document.getElementById(`pict-page-${pageId}`);
   if (pageEl) pageEl.style.display = '';
 
-  // Set active canvas if image already loaded
+  // After the page is visible, sync canvas dimensions and restore painted progress.
+  // Use RAF so the browser has reflowed and img.clientWidth is accurate.
   const canvas = document.getElementById(`p-cvs-${pageId}`);
   const wrap   = document.getElementById(`p-wrap-${pageId}`);
   if (canvas && wrap && wrap.style.display !== 'none') {
-    activeCanvas = canvas;
-    syncPageCanvas(pageId);
+    requestAnimationFrame(() => {
+      if (syncPageCanvas(pageId)) restorePageProgress(pageId);
+      activeCanvas = canvas;
+    });
   }
 
   if (!keepSidebar && window.innerWidth <= 768) closeSidebar();
@@ -477,12 +486,13 @@ document.getElementById('addPictorialPageBtn').addEventListener('click', e => {
 
 // ── Migrate old localStorage format ──────────────────────────────────
 (function migrateOldData() {
-  // Run whenever old keys are present — even if pict_pages already exists
   const oldImg = localStorage.getItem('floorPlanSrc');
   if (!oldImg) return;
 
-  // Move main floor plan → pp_img_1 (Section 1)
-  localStorage.setItem('pp_img_1', oldImg);
+  // Only migrate if the new-format image for page 1 isn't already stored
+  if (!localStorage.getItem('pp_img_1')) {
+    localStorage.setItem('pp_img_1', oldImg);
+  }
   localStorage.removeItem('floorPlanSrc');
 
   const prog1 = localStorage.getItem('pictorialProgress');
@@ -528,7 +538,9 @@ document.querySelector('.nav-item[data-tab="Schedules"]')?.classList.add('active
 
 window.addEventListener('resize', () => {
   if (activePageId && pictorialContainer.style.display !== 'none') {
-    syncPageCanvas(activePageId);
+    requestAnimationFrame(() => {
+      if (syncPageCanvas(activePageId)) restorePageProgress(activePageId);
+    });
   }
 });
 
