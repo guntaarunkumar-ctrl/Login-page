@@ -242,6 +242,97 @@ body {
   flex-direction: column;
 }
 
+/* Header row for groups that have a + button */
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nav-group-header .nav-group-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+/* + button next to a group header */
+.btn-nav-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-right: 0.25rem;
+}
+
+.btn-nav-add:hover {
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--accent-light);
+}
+
+/* nav-item-wrap: item + remove button */
+.nav-item-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: var(--radius-sm);
+  position: relative;
+}
+
+.nav-item-wrap .nav-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-nav-remove-page {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+  margin-right: 0.25rem;
+}
+
+.nav-item-wrap:hover .btn-nav-remove-page {
+  display: flex;
+}
+
+.btn-nav-remove-page:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+/* Editable page label in nav */
+.nav-page-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  outline: none;
+  border-radius: 3px;
+}
+
+.nav-page-label[contenteditable="true"] {
+  background: rgba(124, 58, 237, 0.12);
+  padding: 0 3px;
+  cursor: text;
+  white-space: nowrap;
+}
+
 .nav-group-btn {
   display: flex;
   align-items: center;
@@ -542,11 +633,33 @@ body {
 .content-area.pictorial-active {
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 1.25rem 1.5rem;
+  padding: 0;
+  overflow: hidden;
 }
 
-.pictorial-view {
-  display: none;
+.pictorial-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pictorial-container > .pictorial-toolbar {
+  flex-shrink: 0;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pictorial-page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  min-height: 0;
+}
+
+.pict-page {
+  display: flex;
   flex-direction: column;
   gap: 1rem;
   width: 100%;
