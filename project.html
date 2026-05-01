@@ -79,26 +79,31 @@
           </div>
         </div>
 
-        <!-- Tracking group -->
-        <div class="nav-group" id="group-tracking">
-          <button class="nav-group-btn" aria-expanded="false" data-group="tracking">
-            <span class="nav-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
-                <path d="M13 13l6 6"/>
-              </svg>
-            </span>
-            <span class="nav-label">Tracking</span>
-            <span class="chevron">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </span>
-          </button>
-          <div class="nav-children collapsed" id="children-tracking">
-            <button class="nav-item" data-tab="Pictorial">
-              <span class="nav-dot"></span>Pictorial
+        <!-- Pictorial group -->
+        <div class="nav-group" id="group-pictorial">
+          <div class="nav-group-header">
+            <button class="nav-group-btn" aria-expanded="true" data-group="pictorial">
+              <span class="nav-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                  <path d="M13 13l6 6"/>
+                </svg>
+              </span>
+              <span class="nav-label">Pictorial</span>
+              <span class="chevron">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </span>
             </button>
+            <button class="btn-nav-add" id="addPictorialPageBtn" title="Add page">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="nav-children" id="children-pictorial">
+            <!-- pages added dynamically by JS -->
           </div>
         </div>
 
@@ -173,18 +178,12 @@
           <span class="cs-badge">In Development</span>
         </div>
 
-        <!-- Pictorial progress view -->
-        <div class="pictorial-view" id="pictorialView">
+        <!-- Pictorial container: shared toolbar + per-page content -->
+        <div class="pictorial-container" id="pictorialContainer" style="display:none">
 
-          <!-- Section 1 editable name header -->
-          <div class="p-sec-hdr">
-            <input class="p-sec-name" id="p-sec-name-1" value="Section 1" title="Click to rename" />
-          </div>
-
-          <!-- Toolbar: hidden until an image is loaded -->
-          <div class="pictorial-toolbar" id="pictorialToolbar" style="display:none">
+          <!-- Shared toolbar -->
+          <div class="pictorial-toolbar" id="pictorialToolbar">
             <div class="toolbar-group">
-              <!-- Colour swatches + legend -->
               <div class="color-legend-wrap">
                 <div class="color-swatches">
                   <button class="color-swatch active" data-color="#22c55e" style="background:#22c55e" title="Complete"></button>
@@ -196,14 +195,12 @@
                 <span class="color-legend" id="colorLegend">Complete</span>
               </div>
               <div class="toolbar-sep"></div>
-              <!-- Eraser -->
               <button id="eraserBtn" class="btn-tool" title="Eraser">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
                   <path d="M22 21H7"/><path d="m5 11 9 9"/>
                 </svg>
               </button>
-              <!-- Undo -->
               <button id="undoBtn" class="btn-tool" title="Undo (Ctrl+Z)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 7v6h6"/>
@@ -211,7 +208,6 @@
                 </svg>
               </button>
               <div class="toolbar-sep"></div>
-              <!-- Brush size -->
               <div class="pictorial-brush-wrap">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
@@ -220,14 +216,6 @@
               </div>
             </div>
             <div class="pictorial-actions">
-              <button id="changeImg" class="btn-change-img">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-                Change
-              </button>
               <button id="clearCanvas" class="btn-clear-canvas">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
@@ -238,38 +226,12 @@
             </div>
           </div>
 
-          <!-- Upload drop-zone: shown until image is loaded -->
-          <label class="pictorial-upload-area" id="uploadArea" for="floorPlanInput">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-            <span class="upload-title">Upload Floor Plan</span>
-            <span class="upload-sub">Tap to select an image &nbsp;·&nbsp; or drag &amp; drop</span>
-          </label>
-          <!-- File input lives outside the label so it stays reachable when label is hidden -->
-          <input type="file" id="floorPlanInput" accept="image/*" style="display:none" />
-
-          <!-- Canvas view: hidden until image is loaded -->
-          <div class="pictorial-wrap" id="pictorialWrap" style="display:none">
-            <img id="floorPlanImg" alt="Floor Plan" draggable="false" />
-            <canvas id="progressCanvas"></canvas>
-          </div>
+          <!-- Active page content injected by JS -->
+          <div id="pictorialPageContent" class="pictorial-page-content"></div>
 
           <p class="pictorial-hint" id="pictorialHint" style="display:none">Swipe over any room or area to mark it as complete</p>
 
-          <!-- Extra sections injected by Add button -->
-          <div id="extraSections"></div>
-
-          <!-- Add Section button -->
-          <button class="btn-add-section" id="addSectionBtn">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Add Section
-          </button>
-        </div>
+        </div><!-- /pictorialContainer -->
       </div>
     </main>
 
