@@ -1084,7 +1084,7 @@ body {
   width: 100%;
   height: 100%;
   cursor: crosshair;
-  touch-action: none;
+  touch-action: pan-y pinch-zoom; /* JS sets to none during a paint stroke */
   opacity: 0.5;
 }
 

@@ -191,10 +191,13 @@ function loadPageImage(pageId, src) {
     if (hint) hint.style.display = '';
     const actions = document.querySelector(`#pict-page-${pageId} .page-img-actions`);
     if (actions) actions.style.display = 'flex';
-    syncPageCanvas(pageId);
-    restorePageProgress(pageId);
-    activeCanvas = document.getElementById(`p-cvs-${pageId}`);
     try { localStorage.setItem(`pp_img_${pageId}`, src); } catch(e) {}
+    // Wait one frame for DOM reflow so img.clientWidth is accurate
+    requestAnimationFrame(() => {
+      syncPageCanvas(pageId);
+      restorePageProgress(pageId);
+      activeCanvas = document.getElementById(`p-cvs-${pageId}`);
+    });
   }
   img.onload = onReady;
   img.src = src;
@@ -265,9 +268,24 @@ function wirePageEvents(pageId) {
   canvas.addEventListener('mousemove',  e => { if (isPainting && activeCanvas === canvas) doPaint(e, canvas); });
   canvas.addEventListener('mouseup',    ()  => { isPainting = false; savePageProgress(pageId); });
   canvas.addEventListener('mouseleave', ()  => { isPainting = false; });
-  canvas.addEventListener('touchstart', e => { activeCanvas = canvas; pushUndo(canvas); isPainting = true; doPaint(e, canvas); }, { passive: false });
-  canvas.addEventListener('touchmove',  e => { if (isPainting && activeCanvas === canvas) doPaint(e, canvas); }, { passive: false });
-  canvas.addEventListener('touchend',   ()  => { isPainting = false; savePageProgress(pageId); });
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length > 1) return; // let 2-finger pinch-zoom through
+    canvas.style.touchAction = 'none';
+    activeCanvas = canvas; pushUndo(canvas); isPainting = true; doPaint(e, canvas);
+  }, { passive: false });
+  canvas.addEventListener('touchmove',  e => {
+    if (!isPainting || activeCanvas !== canvas) return;
+    doPaint(e, canvas);
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => {
+    isPainting = false;
+    canvas.style.touchAction = '';   // restore browser zoom/scroll
+    savePageProgress(pageId);
+  });
+  canvas.addEventListener('touchcancel', () => {
+    isPainting = false;
+    canvas.style.touchAction = '';
+  });
 }
 
 function buildNavItemHTML(pageId, pageName) {
@@ -414,6 +432,26 @@ updateLegend(currentColor);
 document.getElementById('eraserBtn').addEventListener('click', () => setEraser(!isEraser));
 document.getElementById('undoBtn').addEventListener('click', undo);
 document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); } });
+
+// Fit / reset-zoom button
+document.getElementById('fitBtn').addEventListener('click', () => {
+  // Scroll pictorial content back to top
+  document.getElementById('pictorialPageContent').scrollTop = 0;
+  // Reset native browser zoom via viewport meta trick
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (meta) {
+    const orig = meta.getAttribute('content');
+    meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1');
+    setTimeout(() => meta.setAttribute('content', orig), 300);
+  }
+  // Re-sync canvas after zoom reset
+  if (activePageId) requestAnimationFrame(() => syncPageCanvas(activePageId));
+});
+
+// Periodic auto-save every 4 seconds (backup in case touch events are missed)
+setInterval(() => {
+  if (activePageId && activeCanvas && activeCanvas.width) savePageProgress(activePageId);
+}, 4000);
 
 // Clear modal
 const clearModal = document.getElementById('clearModal');
