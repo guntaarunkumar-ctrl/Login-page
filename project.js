@@ -439,20 +439,21 @@ document.getElementById('addPictorialPageBtn').addEventListener('click', e => {
 
 // ── Migrate old localStorage format ──────────────────────────────────
 (function migrateOldData() {
-  if (localStorage.getItem('pict_pages')) return; // already new format
+  // Run whenever old keys are present — even if pict_pages already exists
   const oldImg = localStorage.getItem('floorPlanSrc');
   if (!oldImg) return;
 
-  const pages = [];
-  // Migrate main section (section 1)
-  const name1 = localStorage.getItem('p_sec1_name') || 'Section 1';
-  pages.push({ id: 1, name: name1 });
+  // Move main floor plan → pp_img_1 (Section 1)
   localStorage.setItem('pp_img_1', oldImg);
-  const prog1 = localStorage.getItem('pictorialProgress');
-  if (prog1) { localStorage.setItem('pp_1', prog1); localStorage.removeItem('pictorialProgress'); }
   localStorage.removeItem('floorPlanSrc');
 
-  // Migrate dynamically created sections (section 2, 3, ...)
+  const prog1 = localStorage.getItem('pictorialProgress');
+  if (prog1) { localStorage.setItem('pp_1', prog1); localStorage.removeItem('pictorialProgress'); }
+
+  // Rebuild page list starting with Section 1
+  const pages = [{ id: 1, name: localStorage.getItem('p_sec1_name') || 'Section 1' }];
+
+  // Migrate any extra sections added via the old Add Section button
   let sid = 2;
   while (localStorage.getItem('p_img_' + sid)) {
     const secName = localStorage.getItem('p_sec' + sid + '_name') || ('Section ' + sid);
@@ -464,6 +465,7 @@ document.getElementById('addPictorialPageBtn').addEventListener('click', e => {
     sid++;
   }
 
+  // Overwrite pict_pages with migrated data
   localStorage.setItem('pict_pages', JSON.stringify(pages));
 })();
 
