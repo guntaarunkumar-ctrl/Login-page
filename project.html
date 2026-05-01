@@ -261,6 +261,40 @@
     </div>
   </div>
 
+  <!-- Delete section warning modal -->
+  <div class="modal-overlay" id="deletePageModal">
+    <div class="modal">
+      <div class="modal-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+          <path d="M9 6V4h6v2"/>
+        </svg>
+      </div>
+      <h3 class="modal-title">Delete "<span id="deletingPageName">Section</span>"?</h3>
+      <p class="modal-body">The floor plan and all painted progress will be moved to <strong>Deleted Items</strong>. You can restore it from there at any time.</p>
+      <div class="modal-actions">
+        <button id="cancelDeletePageBtn" class="btn-modal-cancel">Cancel</button>
+        <button id="confirmDeletePageBtn" class="btn-modal-danger">Move to Trash</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename section modal -->
+  <div class="modal-overlay" id="renamePageModal">
+    <div class="modal">
+      <h3 class="modal-title" style="margin-bottom:1rem">Rename Section</h3>
+      <input id="renamePageInput" type="text" class="rename-input" placeholder="Section name" />
+      <div class="modal-actions" style="margin-top:1rem">
+        <button id="cancelRenameBtn" class="btn-modal-cancel">Cancel</button>
+        <button id="confirmRenameBtn" class="btn-modal-confirm">Save</button>
+      </div>
+    </div>
+  </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="firebase-config.js"></script>

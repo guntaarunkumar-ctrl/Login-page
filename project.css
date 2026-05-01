@@ -289,8 +289,9 @@ body {
   min-width: 0;
 }
 
+.btn-nav-rename-page,
 .btn-nav-remove-page {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 22px;
@@ -302,11 +303,14 @@ body {
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: background 0.15s, color 0.15s;
-  margin-right: 0.25rem;
 }
 
-.nav-item-wrap:hover .btn-nav-remove-page {
-  display: flex;
+.btn-nav-rename-page { margin-right: 0.125rem; }
+.btn-nav-remove-page { margin-right: 0.25rem; }
+
+.btn-nav-rename-page:hover {
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--accent-light);
 }
 
 .btn-nav-remove-page:hover {
@@ -1086,6 +1090,139 @@ body {
   cursor: crosshair;
   touch-action: pan-y pinch-zoom; /* JS sets to none during a paint stroke */
   opacity: 0.5;
+}
+
+/* ── Rename input ── */
+.rename-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.rename-input:focus { border-color: var(--accent-light); }
+
+.btn-modal-confirm {
+  padding: 0.5rem 1.25rem;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  color: #c4b5fd;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-modal-confirm:hover { background: rgba(124, 58, 237, 0.35); }
+
+/* ── Deleted items trash section ── */
+.nav-trash-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.4rem 0.625rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+}
+
+.nav-trash-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.nav-trash-toggle[aria-expanded="true"] .trash-chevron {
+  transform: rotate(0deg);
+}
+
+.trash-chevron {
+  display: grid;
+  place-items: center;
+  transition: transform 0.22s ease;
+  transform: rotate(-90deg);
+  flex-shrink: 0;
+}
+
+.trash-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+.nav-deleted-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.625rem 0.35rem 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  opacity: 0.65;
+  cursor: default;
+  border-radius: var(--radius-sm);
+}
+
+.nav-deleted-label .nav-page-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-nav-restore,
+.btn-nav-perma-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-nav-restore {
+  color: #86efac;
+  margin-right: 0.125rem;
+}
+
+.btn-nav-restore:hover { background: rgba(34, 197, 94, 0.15); }
+
+.btn-nav-perma-delete {
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+.btn-nav-perma-delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
 }
 
 /* ── Responsive ── */
