@@ -827,9 +827,9 @@ body {
   align-items: center;
   gap: 0.4rem;
   padding: 0.4rem 0.875rem;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  color: #93c5fd;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: var(--accent-light);
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -838,7 +838,7 @@ body {
 }
 
 .btn-download-pdf:hover {
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(124, 58, 237, 0.25);
 }
 
 .btn-download-pdf:disabled {

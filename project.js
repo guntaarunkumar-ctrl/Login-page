@@ -676,7 +676,12 @@ document.getElementById('downloadPdfBtn').addEventListener('click', async () => 
 
   const pagesWithImages = pictorialPages.filter(p => localStorage.getItem(`pp_img_${p.id}`));
   if (!pagesWithImages.length) {
-    alert('No floor plans found. Upload a floor plan image to at least one section first.');
+    alert('No floor plans found. Please upload a floor plan image to at least one section first.');
+    return;
+  }
+
+  if (!window.jspdf) {
+    alert('PDF library is still loading. Please wait a moment and try again.');
     return;
   }
 
