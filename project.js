@@ -696,7 +696,16 @@ document.getElementById('downloadPdfBtn').addEventListener('click', async () => 
     const margin = 10, titleH = 12, footerH = 8;
     const imgMaxW = pageW - margin * 2;
     const imgMaxH = pageH - margin - titleH - footerH - 4;
-    const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const pad = n => String(n).padStart(2, '0');
+    const fileDate = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const fileTime = `${pad(now.getHours())}-${pad(now.getMinutes())}`;
+    const sectionPart = pagesWithImages.length === 1
+      ? `_${pagesWithImages[0].name.replace(/[^a-zA-Z0-9]/g, '_')}`
+      : '';
+    const fileName = `pictorial-progress${sectionPart}_${fileDate}_${fileTime}.pdf`;
 
     for (let i = 0; i < pagesWithImages.length; i++) {
       const page   = pagesWithImages[i];
@@ -711,12 +720,12 @@ document.getElementById('downloadPdfBtn').addEventListener('click', async () => 
       doc.setFontSize(9);
       doc.setTextColor(148, 163, 184);
       doc.text('Project Hub  •  Pictorial Progress Report', margin, 7.5);
-      doc.text(today, pageW - margin, 7.5, { align: 'right' });
+      doc.text(dateStr, pageW - margin, 7.5, { align: 'right' });
 
-      // Section title
-      doc.setFontSize(12);
-      doc.setTextColor(226, 232, 240);
-      doc.text(page.name, margin, titleH + 6);
+      // Section title — dark so it's readable on white PDF background
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text(page.name, margin, titleH + 7);
 
       // Page number (bottom)
       doc.setFontSize(8);
@@ -735,7 +744,7 @@ document.getElementById('downloadPdfBtn').addEventListener('click', async () => 
       doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, w, h);
     }
 
-    doc.save('pictorial-progress.pdf');
+    doc.save(fileName);
   } catch (err) {
     console.error('PDF export failed:', err);
     alert('PDF export failed. Please try again.');
