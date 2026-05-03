@@ -647,6 +647,99 @@ deletePageModal.addEventListener('click', e => {
   if (e.target === deletePageModal) { deletePageModal.classList.remove('show'); deletingPageId = null; }
 });
 
+// ── Export PDF ────────────────────────────────────────────────────────
+function makeCompositeCanvas(imgSrc, progSrc) {
+  return new Promise(resolve => {
+    const offscreen = document.createElement('canvas');
+    const ctx = offscreen.getContext('2d');
+    const base = new Image();
+    base.onload = () => {
+      offscreen.width  = base.naturalWidth;
+      offscreen.height = base.naturalHeight;
+      ctx.drawImage(base, 0, 0);
+      if (progSrc) {
+        const overlay = new Image();
+        overlay.onload = () => { ctx.drawImage(overlay, 0, 0, offscreen.width, offscreen.height); resolve(offscreen); };
+        overlay.onerror = () => resolve(offscreen);
+        overlay.src = progSrc;
+      } else {
+        resolve(offscreen);
+      }
+    };
+    base.onerror = () => resolve(offscreen);
+    base.src = imgSrc;
+  });
+}
+
+document.getElementById('downloadPdfBtn').addEventListener('click', async () => {
+  if (activePageId) savePageProgress(activePageId);
+
+  const pagesWithImages = pictorialPages.filter(p => localStorage.getItem(`pp_img_${p.id}`));
+  if (!pagesWithImages.length) {
+    alert('No floor plans found. Upload a floor plan image to at least one section first.');
+    return;
+  }
+
+  const btn = document.getElementById('downloadPdfBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = 297, pageH = 210;
+    const margin = 10, titleH = 12, footerH = 8;
+    const imgMaxW = pageW - margin * 2;
+    const imgMaxH = pageH - margin - titleH - footerH - 4;
+    const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+    for (let i = 0; i < pagesWithImages.length; i++) {
+      const page   = pagesWithImages[i];
+      const imgSrc = localStorage.getItem(`pp_img_${page.id}`);
+      const prog   = localStorage.getItem(`pp_${page.id}`);
+
+      if (i > 0) doc.addPage();
+
+      // Header bar
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, pageW, titleH, 'F');
+      doc.setFontSize(9);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Project Hub  •  Pictorial Progress Report', margin, 7.5);
+      doc.text(today, pageW - margin, 7.5, { align: 'right' });
+
+      // Section title
+      doc.setFontSize(12);
+      doc.setTextColor(226, 232, 240);
+      doc.text(page.name, margin, titleH + 6);
+
+      // Page number (bottom)
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`${i + 1} / ${pagesWithImages.length}`, pageW / 2, pageH - 3, { align: 'center' });
+
+      const canvas = await makeCompositeCanvas(imgSrc, prog);
+      if (!canvas.width || !canvas.height) continue;
+
+      const aspect = canvas.width / canvas.height;
+      let w = imgMaxW, h = imgMaxW / aspect;
+      if (h > imgMaxH) { h = imgMaxH; w = imgMaxH * aspect; }
+      const x = (pageW - w) / 2;
+      const y = titleH + 10;
+
+      doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, w, h);
+    }
+
+    doc.save('pictorial-progress.pdf');
+  } catch (err) {
+    console.error('PDF export failed:', err);
+    alert('PDF export failed. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export PDF`;
+  }
+});
+
 // ── Add page button (sidebar + button) ──────────────────────────────
 document.getElementById('addPictorialPageBtn').addEventListener('click', e => {
   e.stopPropagation();
