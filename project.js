@@ -831,28 +831,34 @@ window.addEventListener('resize', () => {
 });
 
 // ── Sidebar collapse (desktop) ───────────────────────────────────────
-const expandSidebarBtn = document.getElementById('expandSidebarBtn');
 const mainEl = document.getElementById('main');
 
 function collapseSidebar() {
   sidebar.classList.add('desktop-collapsed');
   mainEl.classList.add('desktop-collapsed');
-  expandSidebarBtn.style.display = 'flex';
   localStorage.setItem('sidebarCollapsed', '1');
 }
 
 function expandSidebar() {
   sidebar.classList.remove('desktop-collapsed');
   mainEl.classList.remove('desktop-collapsed');
-  expandSidebarBtn.style.display = 'none';
   localStorage.removeItem('sidebarCollapsed');
 }
 
-document.getElementById('collapseSidebarBtn').addEventListener('click', collapseSidebar);
-expandSidebarBtn.addEventListener('click', expandSidebar);
+document.getElementById('collapseSidebarBtn').addEventListener('click', () => {
+  sidebar.classList.contains('desktop-collapsed') ? expandSidebar() : collapseSidebar();
+});
+
+// Clicking a nav group icon while collapsed expands the sidebar
+document.querySelectorAll('.nav-group-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sidebar.classList.contains('desktop-collapsed') && window.innerWidth > 768) {
+      expandSidebar();
+    }
+  }, true); // capture phase so it fires before the toggle handler
+});
 
 if (localStorage.getItem('sidebarCollapsed') && window.innerWidth > 768) {
   sidebar.classList.add('desktop-collapsed');
   mainEl.classList.add('desktop-collapsed');
-  expandSidebarBtn.style.display = 'flex';
 }
