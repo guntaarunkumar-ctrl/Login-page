@@ -57,19 +57,16 @@ document.querySelectorAll('.nav-group-btn').forEach(btn => {
 });
 
 // ── Non-pictorial nav items ──────────────────────────────────────────
-const comingSoon = document.getElementById('comingSoon');
+const comingSoon         = document.getElementById('comingSoon');
 const pictorialContainer = document.getElementById('pictorialContainer');
-const pageTitleEl = document.getElementById('pageTitle');
-const csTitleEl   = document.getElementById('csTitle');
+const pageTitleEl        = document.getElementById('pageTitle');
+const csTitleEl          = document.getElementById('csTitle');
 
 function setActiveNonPictorial(tabName) {
-  // deactivate all nav items and pictorial pages
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector(`.nav-item[data-tab="${CSS.escape(tabName)}"]`)?.classList.add('active');
 
   pictorialContainer.style.display = 'none';
-  document.getElementById('pictorialToolbar').style.display = 'none';
-  document.getElementById('pictorialHint').style.display = 'none';
 
   comingSoon.style.display = '';
   comingSoon.style.animation = 'none';
@@ -83,30 +80,34 @@ function setActiveNonPictorial(tabName) {
   if (window.innerWidth <= 768) closeSidebar();
 }
 
-document.querySelectorAll('.nav-item[data-tab]:not([data-page])').forEach(item => {
+document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
   item.addEventListener('click', () => setActiveNonPictorial(item.dataset.tab));
 });
 
-// ── Pictorial — multi-page, multi-floor ─────────────────────────────
+// ── Pictorial — multi-page canvas ────────────────────────────────────
 let isPainting   = false;
 let isEraser     = false;
 let currentColor = '#22c55e';
 let activeCanvas = null;
-let activeFloorId = null;
+let activePageId = null;
 const undoStacks = new Map();
 const MAX_UNDO   = 15;
 
-// pictorialPages: [{id, name, floors:[{id,name}]}]
-let pictorialPages  = [];
-let activePageId    = null;
+let renamingPageId    = null;
+let deletingPageId    = null;
+let clearTargetPageId = null;
+let deletedPages      = [];
+
+// pictorialPages: [{id, name}]
+let pictorialPages = [];
 
 function hexToRgb(hex) {
   return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
 }
 
 function getPaintPos(e, canvas) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
   const scaleY = canvas.height / rect.height;
   const cx = e.touches ? e.touches[0].clientX : e.clientX;
   const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -141,11 +142,12 @@ function setEraser(active) {
   document.getElementById('eraserBtn').classList.toggle('active', active);
 }
 
-function pushUndo() {
-  if (!activeCanvas || !activeCanvas.width) return;
-  if (!undoStacks.has(activeCanvas)) undoStacks.set(activeCanvas, []);
-  const stack = undoStacks.get(activeCanvas);
-  stack.push(activeCanvas.getContext('2d').getImageData(0, 0, activeCanvas.width, activeCanvas.height));
+function pushUndo(canvas) {
+  canvas = canvas || activeCanvas;
+  if (!canvas || !canvas.width) return;
+  if (!undoStacks.has(canvas)) undoStacks.set(canvas, []);
+  const stack = undoStacks.get(canvas);
+  stack.push(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
   if (stack.length > MAX_UNDO) stack.shift();
 }
 
@@ -154,183 +156,147 @@ function undo() {
   const stack = undoStacks.get(activeCanvas);
   if (!stack || !stack.length) return;
   activeCanvas.getContext('2d').putImageData(stack.pop(), 0, 0);
-  if (activeFloorId) saveFloorProgress(activePageId, activeFloorId);
+  if (activePageId) savePageProgress(activePageId);
 }
 
-function syncFloorCanvas(pageId, floorId) {
-  const img    = document.getElementById(`fl-img-${pageId}-${floorId}`);
-  const canvas = document.getElementById(`fl-cvs-${pageId}-${floorId}`);
-  if (!img || !canvas || !img.clientWidth) return;
+function syncPageCanvas(pageId) {
+  const img    = document.getElementById(`p-img-${pageId}`);
+  const canvas = document.getElementById(`p-cvs-${pageId}`);
+  if (!img || !canvas || !img.clientWidth) return false;
+  // Only reset canvas dimensions when they have actually changed (avoids clearing painted content)
+  if (canvas.width === img.clientWidth && canvas.height === img.clientHeight) return false;
   undoStacks.delete(canvas);
   canvas.width  = img.clientWidth;
   canvas.height = img.clientHeight;
+  return true; // signals that canvas was reset and progress should be restored
 }
 
-function saveFloorProgress(pageId, floorId) {
-  const canvas = document.getElementById(`fl-cvs-${pageId}-${floorId}`);
+function savePageProgress(pageId) {
+  const canvas = document.getElementById(`p-cvs-${pageId}`);
   if (!canvas || !canvas.width) return;
-  try { localStorage.setItem(`pp_${pageId}_${floorId}`, canvas.toDataURL()); } catch(e) {}
+  try { localStorage.setItem(`pp_${pageId}`, canvas.toDataURL()); } catch(e) {}
 }
 
-function restoreFloorProgress(pageId, floorId) {
-  const saved  = localStorage.getItem(`pp_${pageId}_${floorId}`);
-  const canvas = document.getElementById(`fl-cvs-${pageId}-${floorId}`);
+function restorePageProgress(pageId) {
+  const saved  = localStorage.getItem(`pp_${pageId}`);
+  const canvas = document.getElementById(`p-cvs-${pageId}`);
   if (!saved || !canvas) return;
   const img = new Image();
   img.onload = () => canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
   img.src = saved;
 }
 
-function loadFloorImage(pageId, floorId, src) {
-  const img    = document.getElementById(`fl-img-${pageId}-${floorId}`);
-  const wrap   = document.getElementById(`fl-wrap-${pageId}-${floorId}`);
-  const upload = document.getElementById(`fl-up-${pageId}-${floorId}`);
+function loadPageImage(pageId, src) {
+  const img    = document.getElementById(`p-img-${pageId}`);
+  const wrap   = document.getElementById(`p-wrap-${pageId}`);
+  const upload = document.getElementById(`p-up-${pageId}`);
+  const hint   = document.getElementById('pictorialHint');
   if (!img) return;
   function onReady() {
     img.onload = null;
     upload.style.display = 'none';
-    wrap.style.display = '';
-    document.getElementById('pictorialToolbar').style.display = '';
-    document.getElementById('pictorialHint').style.display = '';
-    syncFloorCanvas(pageId, floorId);
-    restoreFloorProgress(pageId, floorId);
-    activeCanvas  = document.getElementById(`fl-cvs-${pageId}-${floorId}`);
-    activeFloorId = floorId;
-    try { localStorage.setItem(`pp_img_${pageId}_${floorId}`, src); } catch(e) {}
+    wrap.style.display   = '';
+    if (hint) hint.style.display = '';
+    const actions = document.querySelector(`#pict-page-${pageId} .page-img-actions`);
+    if (actions) actions.style.display = 'flex';
+    try { localStorage.setItem(`pp_img_${pageId}`, src); } catch(e) {}
+    // If the page is already visible, sync + restore now (new upload while viewing).
+    // If hidden, setActivePage will sync + restore when the user navigates to it.
+    const pageEl = document.getElementById(`pict-page-${pageId}`);
+    if (pageEl && pageEl.style.display !== 'none') {
+      requestAnimationFrame(() => {
+        if (syncPageCanvas(pageId)) restorePageProgress(pageId);
+        activeCanvas = document.getElementById(`p-cvs-${pageId}`);
+      });
+    }
   }
   img.onload = onReady;
   img.src = src;
   if (img.complete && img.naturalWidth) onReady();
 }
 
-function buildFloorHTML(pageId, floorId, floorName) {
+function buildPageHTML(pageId, pageName) {
   return `
-<div class="floor-section" id="fl-sec-${pageId}-${floorId}">
-  <div class="floor-header">
-    <div class="floor-title-row">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/>
+<div class="pict-page" id="pict-page-${pageId}" style="display:none">
+  <div class="page-img-actions">
+    <button class="btn-change-img btn-page-change" data-pid="${pageId}" title="Change image">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
-      <span class="floor-title">${floorName}</span>
-    </div>
-    <div class="floor-btns">
-      <button class="btn-tool btn-floor-change" data-pid="${pageId}" data-fid="${floorId}" title="Change image">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-      </button>
-      <button class="btn-tool btn-floor-remove" data-pid="${pageId}" data-fid="${floorId}" title="Remove floor">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
+      Change image
+    </button>
+    <input type="file" class="page-file-input" id="p-fi-${pageId}" data-pid="${pageId}" accept="image/*" style="display:none" />
   </div>
-  <label class="pictorial-upload-area" id="fl-up-${pageId}-${floorId}">
-    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+  <label class="pictorial-upload-area" id="p-up-${pageId}">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
     </svg>
     <span class="upload-title">Upload Floor Plan</span>
-    <span class="upload-sub">Tap to select &nbsp;·&nbsp; or drag &amp; drop</span>
-    <input type="file" class="floor-file-input" data-pid="${pageId}" data-fid="${floorId}" accept="image/*" />
+    <span class="upload-sub">Tap to select an image &nbsp;·&nbsp; or drag &amp; drop</span>
+    <input type="file" class="page-file-input-label" data-pid="${pageId}" accept="image/*" style="display:none" />
   </label>
-  <div class="pictorial-wrap" id="fl-wrap-${pageId}-${floorId}" style="display:none">
-    <img id="fl-img-${pageId}-${floorId}" alt="${floorName}" draggable="false" />
-    <canvas id="fl-cvs-${pageId}-${floorId}" class="floor-canvas" data-pid="${pageId}" data-fid="${floorId}"></canvas>
+  <div class="pictorial-wrap" id="p-wrap-${pageId}" style="display:none">
+    <img id="p-img-${pageId}" alt="${pageName}" draggable="false" />
+    <canvas id="p-cvs-${pageId}" class="p-canvas" data-pid="${pageId}"></canvas>
   </div>
 </div>`;
 }
 
-function wireFloorEvents(pageId, floorId) {
-  const canvas    = document.getElementById(`fl-cvs-${pageId}-${floorId}`);
-  const upload    = document.getElementById(`fl-up-${pageId}-${floorId}`);
-  const fileInput = upload.querySelector('.floor-file-input');
+function wirePageEvents(pageId) {
+  const canvas   = document.getElementById(`p-cvs-${pageId}`);
+  const upload   = document.getElementById(`p-up-${pageId}`);
+  const fi       = document.getElementById(`p-fi-${pageId}`);
+  const labelFi  = upload.querySelector('.page-file-input-label');
 
-  canvas.addEventListener('mousedown',  e => { activeCanvas = canvas; activeFloorId = floorId; pushUndo(); isPainting = true; doPaint(e, canvas); });
-  canvas.addEventListener('mousemove',  e => { if (isPainting && activeCanvas === canvas) doPaint(e, canvas); });
-  canvas.addEventListener('mouseup',    ()  => { isPainting = false; saveFloorProgress(pageId, floorId); });
-  canvas.addEventListener('mouseleave', ()  => { isPainting = false; });
-  canvas.addEventListener('touchstart', e => { activeCanvas = canvas; activeFloorId = floorId; pushUndo(); isPainting = true; doPaint(e, canvas); }, { passive: false });
-  canvas.addEventListener('touchmove',  e => { if (isPainting && activeCanvas === canvas) doPaint(e, canvas); }, { passive: false });
-  canvas.addEventListener('touchend',   ()  => { isPainting = false; saveFloorProgress(pageId, floorId); });
-
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0]; if (!file) return;
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = ev => loadFloorImage(pageId, floorId, ev.target.result);
+    reader.onload = ev => loadPageImage(pageId, ev.target.result);
     reader.readAsDataURL(file);
-    e.target.value = '';
-  });
+  }
 
+  // Label click → file input
+  upload.addEventListener('click', () => labelFi.click());
+  labelFi.addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+
+  // Change button
+  document.querySelector(`.btn-page-change[data-pid="${pageId}"]`).addEventListener('click', () => {
+    localStorage.removeItem(`pp_${pageId}`);
+    fi.click();
+  });
+  fi.addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+
+  // Drag & drop
   upload.addEventListener('dragover',  e => { e.preventDefault(); upload.classList.add('drag-over'); });
   upload.addEventListener('dragleave', ()  => upload.classList.remove('drag-over'));
   upload.addEventListener('drop', e => {
     e.preventDefault(); upload.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = ev => loadFloorImage(pageId, floorId, ev.target.result);
-      reader.readAsDataURL(file);
-    }
+    handleFile(e.dataTransfer.files[0]);
   });
 
-  document.querySelector(`.btn-floor-change[data-pid="${pageId}"][data-fid="${floorId}"]`).addEventListener('click', () => {
-    localStorage.removeItem(`pp_${pageId}_${floorId}`);
-    fileInput.click();
+  // Paint events
+  canvas.addEventListener('mousedown',  e => { activeCanvas = canvas; pushUndo(canvas); isPainting = true; doPaint(e, canvas); });
+  canvas.addEventListener('mousemove',  e => { if (isPainting && activeCanvas === canvas) doPaint(e, canvas); });
+  canvas.addEventListener('mouseup',    ()  => { isPainting = false; savePageProgress(pageId); });
+  canvas.addEventListener('mouseleave', ()  => { isPainting = false; });
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length > 1) return; // let 2-finger pinch-zoom through
+    canvas.style.touchAction = 'none';
+    activeCanvas = canvas; pushUndo(canvas); isPainting = true; doPaint(e, canvas);
+  }, { passive: false });
+  canvas.addEventListener('touchmove',  e => {
+    if (!isPainting || activeCanvas !== canvas) return;
+    doPaint(e, canvas);
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => {
+    isPainting = false;
+    canvas.style.touchAction = '';   // restore browser zoom/scroll
+    savePageProgress(pageId);
   });
-
-  document.querySelector(`.btn-floor-remove[data-pid="${pageId}"][data-fid="${floorId}"]`).addEventListener('click', () => {
-    const page = pictorialPages.find(p => p.id === pageId);
-    if (!page || page.floors.length <= 1) return;
-    document.getElementById(`fl-sec-${pageId}-${floorId}`).remove();
-    page.floors = page.floors.filter(f => f.id !== floorId);
-    localStorage.removeItem(`pp_img_${pageId}_${floorId}`);
-    localStorage.removeItem(`pp_${pageId}_${floorId}`);
-    if (activeFloorId === floorId) { activeCanvas = null; activeFloorId = null; }
-    savePageList();
+  canvas.addEventListener('touchcancel', () => {
+    isPainting = false;
+    canvas.style.touchAction = '';
   });
-}
-
-function addFloor(pageId, floorId, floorName, restore) {
-  const page = pictorialPages.find(p => p.id === pageId);
-  if (!page) return;
-  const maxId = page.floors.reduce((m, f) => Math.max(m, f.id), 0);
-  floorId   = floorId   || maxId + 1;
-  floorName = floorName || `Floor ${floorId}`;
-  page.floors.push({ id: floorId, name: floorName });
-
-  const container = document.getElementById(`page-floors-${pageId}`);
-  container.insertAdjacentHTML('beforeend', buildFloorHTML(pageId, floorId, floorName));
-  wireFloorEvents(pageId, floorId);
-
-  if (restore) {
-    const src = localStorage.getItem(`pp_img_${pageId}_${floorId}`);
-    if (src) loadFloorImage(pageId, floorId, src);
-  } else {
-    savePageList();
-  }
-}
-
-// ── Page management ──────────────────────────────────────────────────
-function savePageList() {
-  try {
-    localStorage.setItem('pict_pages', JSON.stringify(
-      pictorialPages.map(p => ({ id: p.id, name: p.name, floors: p.floors }))
-    ));
-  } catch(e) {}
-}
-
-function buildPageHTML(pageId, pageName) {
-  return `
-<div class="pict-page" id="pict-page-${pageId}" style="display:none">
-  <div class="floors-container" id="page-floors-${pageId}"></div>
-  <button class="btn-add-floor" id="add-floor-btn-${pageId}">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-    Add Floor
-  </button>
-</div>`;
 }
 
 function buildNavItemHTML(pageId, pageName) {
@@ -338,9 +304,15 @@ function buildNavItemHTML(pageId, pageName) {
 <div class="nav-item-wrap" id="nav-wrap-${pageId}">
   <button class="nav-item" data-page="${pageId}">
     <span class="nav-dot"></span>
-    <span class="nav-page-label" data-page="${pageId}" contenteditable="false">${pageName}</span>
+    <span class="nav-page-label" id="nav-label-${pageId}">${pageName}</span>
   </button>
-  <button class="btn-nav-remove-page" data-page="${pageId}" title="Remove page">
+  <button class="btn-nav-rename-page" data-page="${pageId}" title="Rename">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  </button>
+  <button class="btn-nav-remove-page" data-page="${pageId}" title="Delete">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
     </svg>
@@ -349,122 +321,194 @@ function buildNavItemHTML(pageId, pageName) {
 }
 
 function wireNavItemEvents(pageId) {
-  const navBtn  = document.querySelector(`.nav-item[data-page="${pageId}"]`);
-  const label   = document.querySelector(`.nav-page-label[data-page="${pageId}"]`);
+  const navBtn    = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+  const renameBtn = document.querySelector(`.btn-nav-rename-page[data-page="${pageId}"]`);
   const removeBtn = document.querySelector(`.btn-nav-remove-page[data-page="${pageId}"]`);
 
-  navBtn.addEventListener('click', e => {
-    if (e.target === label && label.contentEditable === 'true') return;
-    setActivePage(pageId);
-  });
+  navBtn.addEventListener('click', () => setActivePage(pageId));
 
-  // Double-click label to edit
-  label.addEventListener('dblclick', e => {
+  renameBtn.addEventListener('click', e => {
     e.stopPropagation();
-    label.contentEditable = 'true';
-    label.focus();
-    const range = document.createRange();
-    range.selectNodeContents(label);
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
+    const page  = pictorialPages.find(p => p.id === pageId);
+    const input = document.getElementById('renamePageInput');
+    input.value  = page ? page.name : '';
+    renamingPageId = pageId;
+    document.getElementById('renamePageModal').classList.add('show');
+    requestAnimationFrame(() => { input.focus(); input.select(); });
   });
 
-  label.addEventListener('blur', () => {
-    label.contentEditable = 'false';
-    const newName = label.textContent.trim() || 'Untitled';
-    label.textContent = newName;
+  removeBtn.addEventListener('click', e => {
+    e.stopPropagation();
     const page = pictorialPages.find(p => p.id === pageId);
-    if (page) { page.name = newName; savePageList(); }
-  });
-
-  label.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); label.blur(); }
-    if (e.key === 'Escape') {
-      const page = pictorialPages.find(p => p.id === pageId);
-      if (page) label.textContent = page.name;
-      label.blur();
-    }
-  });
-
-  removeBtn.addEventListener('click', () => {
-    if (pictorialPages.length <= 1) return;
-    document.getElementById(`nav-wrap-${pageId}`)?.remove();
-    document.getElementById(`pict-page-${pageId}`)?.remove();
-    pictorialPages = pictorialPages.filter(p => p.id !== pageId);
-
-    // Clean localStorage
-    try {
-      const saved = JSON.parse(localStorage.getItem('pict_pages') || '[]');
-      saved.find(p => p.id === pageId)?.floors.forEach(f => {
-        localStorage.removeItem(`pp_img_${pageId}_${f.id}`);
-        localStorage.removeItem(`pp_${pageId}_${f.id}`);
-      });
-    } catch(e) {}
-    savePageList();
-
-    if (activePageId === pageId) {
-      activeCanvas = null; activeFloorId = null;
-      if (pictorialPages.length) setActivePage(pictorialPages[0].id);
-    }
+    document.getElementById('deletingPageName').textContent = page ? page.name : 'Section';
+    deletingPageId = pageId;
+    document.getElementById('deletePageModal').classList.add('show');
   });
 }
 
-function setActivePage(pageId) {
-  activePageId  = pageId;
-  activeCanvas  = null;
-  activeFloorId = null;
+function savePageList() {
+  try {
+    localStorage.setItem('pict_pages', JSON.stringify(pictorialPages.map(p => ({ id: p.id, name: p.name }))));
+  } catch(e) {}
+}
 
-  // Show pictorial container, hide coming-soon
+function saveDeletedList() {
+  try { localStorage.setItem('pict_deleted', JSON.stringify(deletedPages.map(p => ({ id: p.id, name: p.name })))); } catch(e) {}
+}
+
+function buildDeletedItemHTML(page) {
+  return `
+<div class="nav-item-wrap nav-deleted-item" id="del-wrap-${page.id}">
+  <span class="nav-item nav-deleted-label">
+    <span class="nav-dot"></span>
+    <span class="nav-page-label">${page.name}</span>
+  </span>
+  <button class="btn-nav-restore" data-delid="${page.id}" title="Restore">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+    </svg>
+  </button>
+  <button class="btn-nav-perma-delete" data-delid="${page.id}" title="Delete permanently">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+      <path d="M10 11v6"/><path d="M14 11v6"/>
+    </svg>
+  </button>
+</div>`;
+}
+
+function renderDeletedSection() {
+  const existing = document.getElementById('deleted-items-section');
+  if (existing) existing.remove();
+  if (!deletedPages.length) return;
+
+  document.getElementById('children-pictorial').insertAdjacentHTML('beforeend', `
+<div id="deleted-items-section" style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+  <button class="nav-trash-toggle" id="trashToggleBtn" aria-expanded="false">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+      <path d="M10 11v6"/><path d="M14 11v6"/>
+    </svg>
+    <span style="flex:1;text-align:left;font-size:0.8rem">Deleted Items</span>
+    <span class="trash-badge">${deletedPages.length}</span>
+    <span class="trash-chevron">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </span>
+  </button>
+  <div class="nav-children collapsed" id="children-deleted">
+    ${deletedPages.map(p => buildDeletedItemHTML(p)).join('')}
+  </div>
+</div>`);
+
+  document.getElementById('trashToggleBtn').addEventListener('click', () => {
+    const btn = document.getElementById('trashToggleBtn');
+    const ch  = document.getElementById('children-deleted');
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    ch.classList.toggle('collapsed', expanded);
+  });
+
+  deletedPages.forEach(p => wireDeletedItemEvents(p.id));
+}
+
+function wireDeletedItemEvents(pageId) {
+  const restoreBtn = document.querySelector(`.btn-nav-restore[data-delid="${pageId}"]`);
+  const permaBtn   = document.querySelector(`.btn-nav-perma-delete[data-delid="${pageId}"]`);
+
+  restoreBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    const idx = deletedPages.findIndex(p => p.id === pageId);
+    if (idx === -1) return;
+    const page = deletedPages.splice(idx, 1)[0];
+    saveDeletedList();
+
+    pictorialPages.push(page);
+    savePageList();
+
+    document.getElementById('pictorialPageContent').insertAdjacentHTML('beforeend', buildPageHTML(page.id, page.name));
+    wirePageEvents(page.id);
+
+    // Insert nav item before deleted section
+    const delSection = document.getElementById('deleted-items-section');
+    if (delSection) {
+      delSection.insertAdjacentHTML('beforebegin', buildNavItemHTML(page.id, page.name));
+    } else {
+      document.getElementById('children-pictorial').insertAdjacentHTML('beforeend', buildNavItemHTML(page.id, page.name));
+    }
+    wireNavItemEvents(page.id);
+
+    const src = localStorage.getItem(`pp_img_${page.id}`);
+    if (src) loadPageImage(page.id, src);
+
+    renderDeletedSection();
+    setActivePage(page.id);
+  });
+
+  permaBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    const idx = deletedPages.findIndex(p => p.id === pageId);
+    if (idx === -1) return;
+    deletedPages.splice(idx, 1);
+    saveDeletedList();
+    localStorage.removeItem(`pp_img_${pageId}`);
+    localStorage.removeItem(`pp_${pageId}`);
+    renderDeletedSection();
+  });
+}
+
+function setActivePage(pageId, keepSidebar) {
+  activePageId = pageId;
+  activeCanvas = null;
+
   comingSoon.style.display = 'none';
   pictorialContainer.style.display = 'flex';
   document.getElementById('contentArea').classList.add('pictorial-active');
 
-  // Update page title
   const page = pictorialPages.find(p => p.id === pageId);
-  const name = page ? page.name : 'Pictorial';
-  pageTitleEl.textContent = name;
+  pageTitleEl.textContent = page ? page.name : 'Pictorial';
 
-  // Highlight nav item
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector(`.nav-item[data-page="${pageId}"]`)?.classList.add('active');
 
-  // Show only this page's content
   document.querySelectorAll('.pict-page').forEach(el => el.style.display = 'none');
   const pageEl = document.getElementById(`pict-page-${pageId}`);
   if (pageEl) pageEl.style.display = '';
 
-  // Sync canvases for this page
-  if (page) page.floors.forEach(f => syncFloorCanvas(pageId, f.id));
+  // After the page is visible, sync canvas dimensions and restore painted progress.
+  // Use RAF so the browser has reflowed and img.clientWidth is accurate.
+  const canvas = document.getElementById(`p-cvs-${pageId}`);
+  const wrap   = document.getElementById(`p-wrap-${pageId}`);
+  if (canvas && wrap && wrap.style.display !== 'none') {
+    requestAnimationFrame(() => {
+      if (syncPageCanvas(pageId)) restorePageProgress(pageId);
+      activeCanvas = canvas;
+    });
+  }
 
-  if (window.innerWidth <= 768) closeSidebar();
+  if (!keepSidebar && window.innerWidth <= 768) closeSidebar();
 }
 
 function addPage(pageId, pageName, restore) {
   const maxId = pictorialPages.reduce((m, p) => Math.max(m, p.id), 0);
   pageId   = pageId   || maxId + 1;
   pageName = pageName || `Section ${pageId}`;
-  pictorialPages.push({ id: pageId, name: pageName, floors: [] });
+  pictorialPages.push({ id: pageId, name: pageName });
 
-  // Inject nav item
-  document.getElementById('children-pictorial').insertAdjacentHTML('beforeend', buildNavItemHTML(pageId, pageName));
+  const delSection = document.getElementById('deleted-items-section');
+  if (delSection) {
+    delSection.insertAdjacentHTML('beforebegin', buildNavItemHTML(pageId, pageName));
+  } else {
+    document.getElementById('children-pictorial').insertAdjacentHTML('beforeend', buildNavItemHTML(pageId, pageName));
+  }
   wireNavItemEvents(pageId);
 
-  // Inject page content into pictorialPageContent
   document.getElementById('pictorialPageContent').insertAdjacentHTML('beforeend', buildPageHTML(pageId, pageName));
-
-  // Wire add-floor button
-  document.getElementById(`add-floor-btn-${pageId}`).addEventListener('click', () => addFloor(pageId));
+  wirePageEvents(pageId);
 
   if (restore) {
-    const saved = JSON.parse(localStorage.getItem('pict_pages') || '[]');
-    const savedPage = saved.find(p => p.id === pageId);
-    if (savedPage && savedPage.floors.length) {
-      savedPage.floors.forEach(f => addFloor(pageId, f.id, f.name, true));
-    } else {
-      addFloor(pageId, 1, 'Floor 1');
-    }
+    const src = localStorage.getItem(`pp_img_${pageId}`);
+    if (src) loadPageImage(pageId, src);
   } else {
-    addFloor(pageId, 1, 'Floor 1');
     savePageList();
   }
 
@@ -491,28 +535,252 @@ document.getElementById('eraserBtn').addEventListener('click', () => setEraser(!
 document.getElementById('undoBtn').addEventListener('click', undo);
 document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); } });
 
-// Clear modal
+// Fit / reset-zoom button
+document.getElementById('fitBtn').addEventListener('click', () => {
+  // Scroll pictorial content back to top
+  document.getElementById('pictorialPageContent').scrollTop = 0;
+  // Reset native browser zoom via viewport meta trick
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (meta) {
+    const orig = meta.getAttribute('content');
+    meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1');
+    setTimeout(() => meta.setAttribute('content', orig), 300);
+  }
+  // Re-sync canvas after zoom reset
+  if (activePageId) requestAnimationFrame(() => syncPageCanvas(activePageId));
+});
+
+// Periodic auto-save every 4 seconds (backup in case touch events are missed)
+setInterval(() => {
+  if (activePageId && activeCanvas && activeCanvas.width) savePageProgress(activePageId);
+}, 4000);
+
+// ── Clear modal ──────────────────────────────────────────────────────
 const clearModal = document.getElementById('clearModal');
-document.getElementById('clearCanvas').addEventListener('click', () => { if (activeCanvas) clearModal.classList.add('show'); });
-document.getElementById('cancelClearBtn').addEventListener('click', () => clearModal.classList.remove('show'));
+document.getElementById('clearCanvas').addEventListener('click', () => {
+  if (!activePageId) return;
+  const canvas = document.getElementById(`p-cvs-${activePageId}`);
+  if (!canvas || !canvas.width) return;
+  clearTargetPageId = activePageId;
+  clearModal.classList.add('show');
+});
+document.getElementById('cancelClearBtn').addEventListener('click', () => {
+  clearModal.classList.remove('show');
+  clearTargetPageId = null;
+});
 document.getElementById('confirmClearBtn').addEventListener('click', () => {
   clearModal.classList.remove('show');
-  if (!activeCanvas) return;
-  pushUndo();
-  activeCanvas.getContext('2d').clearRect(0, 0, activeCanvas.width, activeCanvas.height);
-  if (activePageId && activeFloorId) localStorage.removeItem(`pp_${activePageId}_${activeFloorId}`);
+  if (!clearTargetPageId) return;
+  const canvas = document.getElementById(`p-cvs-${clearTargetPageId}`);
+  if (canvas) {
+    pushUndo(canvas);
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    localStorage.removeItem(`pp_${clearTargetPageId}`);
+  }
+  clearTargetPageId = null;
 });
-clearModal.addEventListener('click', e => { if (e.target === clearModal) clearModal.classList.remove('show'); });
+clearModal.addEventListener('click', e => {
+  if (e.target === clearModal) { clearModal.classList.remove('show'); clearTargetPageId = null; }
+});
 
-// ── Add page button ──────────────────────────────────────────────────
+// ── Rename modal ──────────────────────────────────────────────────────
+const renameModal = document.getElementById('renamePageModal');
+document.getElementById('cancelRenameBtn').addEventListener('click', () => {
+  renameModal.classList.remove('show'); renamingPageId = null;
+});
+document.getElementById('confirmRenameBtn').addEventListener('click', () => {
+  if (!renamingPageId) { renameModal.classList.remove('show'); return; }
+  const newName = document.getElementById('renamePageInput').value.trim() || 'Untitled';
+  const page    = pictorialPages.find(p => p.id === renamingPageId);
+  if (page) {
+    page.name = newName;
+    const labelEl = document.getElementById(`nav-label-${renamingPageId}`);
+    if (labelEl) labelEl.textContent = newName;
+    if (activePageId === renamingPageId) pageTitleEl.textContent = newName;
+    savePageList();
+  }
+  renameModal.classList.remove('show'); renamingPageId = null;
+});
+document.getElementById('renamePageInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter')  document.getElementById('confirmRenameBtn').click();
+  if (e.key === 'Escape') document.getElementById('cancelRenameBtn').click();
+});
+renameModal.addEventListener('click', e => {
+  if (e.target === renameModal) { renameModal.classList.remove('show'); renamingPageId = null; }
+});
+
+// ── Delete-to-trash modal ─────────────────────────────────────────────
+const deletePageModal = document.getElementById('deletePageModal');
+document.getElementById('cancelDeletePageBtn').addEventListener('click', () => {
+  deletePageModal.classList.remove('show'); deletingPageId = null;
+});
+document.getElementById('confirmDeletePageBtn').addEventListener('click', () => {
+  if (!deletingPageId) { deletePageModal.classList.remove('show'); return; }
+  const pageId = deletingPageId;
+  deletePageModal.classList.remove('show'); deletingPageId = null;
+
+  const idx = pictorialPages.findIndex(p => p.id === pageId);
+  if (idx === -1) return;
+  const page = pictorialPages.splice(idx, 1)[0];
+  savePageList();
+  deletedPages.push(page);
+  saveDeletedList();
+
+  document.getElementById(`nav-wrap-${pageId}`)?.remove();
+  document.getElementById(`pict-page-${pageId}`)?.remove();
+
+  renderDeletedSection();
+
+  if (activePageId === pageId) {
+    activeCanvas  = null;
+    activePageId  = null;
+    if (pictorialPages.length) {
+      setActivePage(pictorialPages[0].id);
+    } else {
+      pictorialContainer.style.display = 'none';
+      comingSoon.style.display = '';
+      pageTitleEl.textContent  = 'Pictorial';
+    }
+  }
+});
+deletePageModal.addEventListener('click', e => {
+  if (e.target === deletePageModal) { deletePageModal.classList.remove('show'); deletingPageId = null; }
+});
+
+// ── Export PDF ────────────────────────────────────────────────────────
+function makeCompositeCanvas(imgSrc, progSrc) {
+  return new Promise(resolve => {
+    const offscreen = document.createElement('canvas');
+    const ctx = offscreen.getContext('2d');
+    const base = new Image();
+    base.onload = () => {
+      offscreen.width  = base.naturalWidth;
+      offscreen.height = base.naturalHeight;
+      ctx.drawImage(base, 0, 0);
+      if (progSrc) {
+        const overlay = new Image();
+        overlay.onload = () => { ctx.drawImage(overlay, 0, 0, offscreen.width, offscreen.height); resolve(offscreen); };
+        overlay.onerror = () => resolve(offscreen);
+        overlay.src = progSrc;
+      } else {
+        resolve(offscreen);
+      }
+    };
+    base.onerror = () => resolve(offscreen);
+    base.src = imgSrc;
+  });
+}
+
+document.getElementById('downloadPdfBtn').addEventListener('click', async () => {
+  if (activePageId) savePageProgress(activePageId);
+
+  const pagesWithImages = pictorialPages.filter(p => localStorage.getItem(`pp_img_${p.id}`));
+  if (!pagesWithImages.length) {
+    alert('No floor plans found. Upload a floor plan image to at least one section first.');
+    return;
+  }
+
+  const btn = document.getElementById('downloadPdfBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = 297, pageH = 210;
+    const margin = 10, titleH = 12, footerH = 8;
+    const imgMaxW = pageW - margin * 2;
+    const imgMaxH = pageH - margin - titleH - footerH - 4;
+    const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+    for (let i = 0; i < pagesWithImages.length; i++) {
+      const page   = pagesWithImages[i];
+      const imgSrc = localStorage.getItem(`pp_img_${page.id}`);
+      const prog   = localStorage.getItem(`pp_${page.id}`);
+
+      if (i > 0) doc.addPage();
+
+      // Header bar
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, pageW, titleH, 'F');
+      doc.setFontSize(9);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Project Hub  •  Pictorial Progress Report', margin, 7.5);
+      doc.text(today, pageW - margin, 7.5, { align: 'right' });
+
+      // Section title
+      doc.setFontSize(12);
+      doc.setTextColor(226, 232, 240);
+      doc.text(page.name, margin, titleH + 6);
+
+      // Page number (bottom)
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`${i + 1} / ${pagesWithImages.length}`, pageW / 2, pageH - 3, { align: 'center' });
+
+      const canvas = await makeCompositeCanvas(imgSrc, prog);
+      if (!canvas.width || !canvas.height) continue;
+
+      const aspect = canvas.width / canvas.height;
+      let w = imgMaxW, h = imgMaxW / aspect;
+      if (h > imgMaxH) { h = imgMaxH; w = imgMaxH * aspect; }
+      const x = (pageW - w) / 2;
+      const y = titleH + 10;
+
+      doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, w, h);
+    }
+
+    doc.save('pictorial-progress.pdf');
+  } catch (err) {
+    console.error('PDF export failed:', err);
+    alert('PDF export failed. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export PDF`;
+  }
+});
+
+// ── Add page button (sidebar + button) ──────────────────────────────
 document.getElementById('addPictorialPageBtn').addEventListener('click', e => {
   e.stopPropagation();
   const newId = addPage();
-  setActivePage(newId);
-  // Expand pictorial group if collapsed
-  const btn = document.querySelector('.nav-group-btn[data-group="pictorial"]');
-  if (btn && btn.getAttribute('aria-expanded') === 'false') btn.click();
+  setActivePage(newId, true); // keep sidebar open so user sees the new page
+  const groupBtn = document.querySelector('.nav-group-btn[data-group="pictorial"]');
+  if (groupBtn && groupBtn.getAttribute('aria-expanded') === 'false') groupBtn.click();
 });
+
+// ── Migrate old localStorage format ──────────────────────────────────
+(function migrateOldData() {
+  const oldImg = localStorage.getItem('floorPlanSrc');
+  if (!oldImg) return;
+
+  // Only migrate if the new-format image for page 1 isn't already stored
+  if (!localStorage.getItem('pp_img_1')) {
+    localStorage.setItem('pp_img_1', oldImg);
+  }
+  localStorage.removeItem('floorPlanSrc');
+
+  const prog1 = localStorage.getItem('pictorialProgress');
+  if (prog1) { localStorage.setItem('pp_1', prog1); localStorage.removeItem('pictorialProgress'); }
+
+  // Rebuild page list starting with Section 1
+  const pages = [{ id: 1, name: localStorage.getItem('p_sec1_name') || 'Section 1' }];
+
+  // Migrate any extra sections added via the old Add Section button
+  let sid = 2;
+  while (localStorage.getItem('p_img_' + sid)) {
+    const secName = localStorage.getItem('p_sec' + sid + '_name') || ('Section ' + sid);
+    pages.push({ id: sid, name: secName });
+    localStorage.setItem('pp_img_' + sid, localStorage.getItem('p_img_' + sid));
+    const sp = localStorage.getItem('p_prog_' + sid);
+    if (sp) { localStorage.setItem('pp_' + sid, sp); localStorage.removeItem('p_prog_' + sid); }
+    localStorage.removeItem('p_img_' + sid);
+    sid++;
+  }
+
+  // Overwrite pict_pages with migrated data
+  localStorage.setItem('pict_pages', JSON.stringify(pages));
+})();
 
 // ── Restore from localStorage ─────────────────────────────────────────
 const savedPages = localStorage.getItem('pict_pages');
@@ -530,14 +798,21 @@ if (savedPages) {
   firstPageId = addPage();
 }
 
-// ── Default view (non-pictorial) ────────────────────────────────────
-// Start with Schedules selected
+// Restore deleted pages list and render trash section
+const savedDeleted = localStorage.getItem('pict_deleted');
+if (savedDeleted) {
+  try { deletedPages = JSON.parse(savedDeleted); } catch(e) { deletedPages = []; }
+}
+renderDeletedSection();
+
+// Start on Schedules (not pictorial)
 document.querySelector('.nav-item[data-tab="Schedules"]')?.classList.add('active');
 
 window.addEventListener('resize', () => {
-  if (activePageId) {
-    const page = pictorialPages.find(p => p.id === activePageId);
-    if (page) page.floors.forEach(f => syncFloorCanvas(activePageId, f.id));
+  if (activePageId && pictorialContainer.style.display !== 'none') {
+    requestAnimationFrame(() => {
+      if (syncPageCanvas(activePageId)) restorePageProgress(activePageId);
+    });
   }
 });
 
