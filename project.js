@@ -1,33 +1,88 @@
-// Auth guard + populate user info
-firebase.auth().onAuthStateChanged(user => {
+// Auth guard + permission check
+const ADMIN_EMAIL = 'guntaarunkumar@gmail.com';
+const db = firebase.firestore();
+
+firebase.auth().onAuthStateChanged(async user => {
   if (!user) { window.location.href = 'index.html'; return; }
 
-  const name = user.displayName || user.email.split('@')[0];
+  // ── Check Firestore permissions ──────────────────────────────────
+  let perms = null;
 
-  document.getElementById('userName').textContent = name;
-  document.getElementById('topbarUserName').textContent = name;
+  if (user.email === ADMIN_EMAIL) {
+    // Admin always has full access
+    perms = { planning: true, pictorial: true, billing: true, exportPdf: true, blocked: false };
+    // Upsert admin record so they appear in the panel
+    db.collection('users').doc(user.email).set(
+      { email: user.email, planning: true, pictorial: true, billing: true, exportPdf: true,
+        blocked: false, lastLogin: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    ).catch(() => {});
+  } else {
+    try {
+      const doc = await db.collection('users').doc(user.email).get();
+      if (!doc.exists) {
+        showAccessScreen('not-registered'); return;
+      }
+      perms = doc.data();
+      if (perms.blocked) {
+        showAccessScreen('blocked'); return;
+      }
+      // Update last login (non-blocking)
+      db.collection('users').doc(user.email).update({
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(() => {});
+    } catch (err) {
+      showAccessScreen('error'); return;
+    }
+  }
+
+  // ── Apply permissions ────────────────────────────────────────────
+  if (!perms.planning)  document.getElementById('group-planning').style.display  = 'none';
+  if (!perms.pictorial) document.getElementById('group-pictorial').style.display = 'none';
+  if (!perms.billing)   document.getElementById('group-qs').style.display        = 'none';
+  if (!perms.exportPdf) { const b = document.getElementById('downloadPdfBtn'); if (b) b.style.display = 'none'; }
+
+  // ── Populate user info ───────────────────────────────────────────
+  const name = user.displayName || user.email.split('@')[0];
+  document.getElementById('userName').textContent         = name;
+  document.getElementById('topbarUserName').textContent   = name;
 
   const lastLogin = user.metadata.lastSignInTime;
   if (lastLogin) {
     const formatted = new Date(lastLogin).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-    document.getElementById('userLastLogin').textContent = 'Last login: ' + formatted;
+    document.getElementById('userLastLogin').textContent  = 'Last login: ' + formatted;
     document.getElementById('topbarUserDate').textContent = formatted;
   }
 
-  const avatarEl = document.getElementById('userAvatar');
-  const topbarAvatarEl = document.getElementById('topbarUserAvatar');
+  const avatarEl        = document.getElementById('userAvatar');
+  const topbarAvatarEl  = document.getElementById('topbarUserAvatar');
   if (user.photoURL) {
-    const img = document.createElement('img');
-    img.src = user.photoURL; img.alt = name;
-    avatarEl.appendChild(img);
-    const img2 = document.createElement('img');
-    img2.src = user.photoURL; img2.alt = name;
-    topbarAvatarEl.appendChild(img2);
+    const img = document.createElement('img'); img.src = user.photoURL; img.alt = name; avatarEl.appendChild(img);
+    const img2 = document.createElement('img'); img2.src = user.photoURL; img2.alt = name; topbarAvatarEl.appendChild(img2);
   } else {
     const initial = name.charAt(0).toUpperCase();
-    avatarEl.textContent = initial;
-    topbarAvatarEl.textContent = initial;
+    avatarEl.textContent = initial; topbarAvatarEl.textContent = initial;
   }
+});
+
+function showAccessScreen(type) {
+  document.querySelector('.layout').style.display  = 'none';
+  document.querySelector('.topbar').style.display  = 'none';
+  const screen = document.getElementById('accessScreen');
+  screen.style.display = 'flex';
+  const msgs = {
+    'not-registered': ['📋', 'Access Not Granted',    'Your email is not registered. Please contact your administrator to request access.'],
+    'blocked':        ['🔒', 'Account Suspended',     'Your access has been suspended. Please contact your administrator.'],
+    'error':          ['⚠️', 'Connection Error',      'Unable to verify your permissions. Please refresh and try again.'],
+  };
+  const [icon, title, msg] = msgs[type] || msgs['error'];
+  document.getElementById('accessIcon').textContent  = icon;
+  document.getElementById('accessTitle').textContent = title;
+  document.getElementById('accessMsg').textContent   = msg;
+}
+
+document.getElementById('accessSignOutBtn').addEventListener('click', () => {
+  firebase.auth().signOut().finally(() => { window.location.href = 'index.html'; });
 });
 
 document.getElementById('signOutBtn').addEventListener('click', () => {

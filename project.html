@@ -33,6 +33,16 @@
     </svg>
   </button>
 
+  <!-- Access denied / not registered screen -->
+  <div class="access-screen" id="accessScreen" style="display:none">
+    <div class="access-card">
+      <div class="access-icon" id="accessIcon">🔒</div>
+      <h2 class="access-title" id="accessTitle">Access Restricted</h2>
+      <p class="access-msg" id="accessMsg">Your account does not have access to this application.</p>
+      <button id="accessSignOutBtn" class="btn-access-signout">Sign Out</button>
+    </div>
+  </div>
+
   <div class="layout">
 
     <!-- Sidebar overlay (mobile) -->
@@ -305,6 +315,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="firebase-config.js"></script>
   <script src="project.js"></script>
