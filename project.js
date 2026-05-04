@@ -659,7 +659,14 @@ function makeCompositeCanvas(imgSrc, progSrc) {
       ctx.drawImage(base, 0, 0);
       if (progSrc) {
         const overlay = new Image();
-        overlay.onload = () => { ctx.drawImage(overlay, 0, 0, offscreen.width, offscreen.height); resolve(offscreen); };
+        overlay.onload = () => {
+          // Draw paint at 50% opacity so floor plan lines show through,
+          // matching how it looks on screen (canvas overlay over separate img element)
+          ctx.globalAlpha = 0.5;
+          ctx.drawImage(overlay, 0, 0, offscreen.width, offscreen.height);
+          ctx.globalAlpha = 1;
+          resolve(offscreen);
+        };
         overlay.onerror = () => resolve(offscreen);
         overlay.src = progSrc;
       } else {
