@@ -33,19 +33,27 @@ document.getElementById('signOutDeniedBtn').addEventListener('click', () => auth
 // ── Load users (real-time) ────────────────────────────────────────────
 function loadUsers() {
   if (unsubscribe) unsubscribe();
-  unsubscribe = db.collection('users').orderBy('createdAt', 'desc').onSnapshot(
+
+  const tbody = document.getElementById('usersTableBody');
+  tbody.innerHTML = `<tr><td colspan="8" class="empty-state">Loading…</td></tr>`;
+
+  unsubscribe = db.collection('users').onSnapshot(
     snap => {
       allUsers = snap.docs.map(d => ({ email: d.id, ...d.data() }));
+      // Sort newest first client-side (avoids needing a Firestore index)
+      allUsers.sort((a, b) => {
+        const at = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const bt = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return bt - at;
+      });
       updateStats();
       renderTable(allUsers);
     },
     err => {
-      // First load may fail if there are no documents or index needed
-      db.collection('users').get().then(snap => {
-        allUsers = snap.docs.map(d => ({ email: d.id, ...d.data() }));
-        updateStats();
-        renderTable(allUsers);
-      }).catch(() => renderTable([]));
+      console.error('Firestore error:', err);
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:#f87171">
+        Error: ${err.message}<br><small>Check Firestore rules and ensure the database is enabled.</small>
+      </td></tr>`;
     }
   );
 }
@@ -168,7 +176,8 @@ document.getElementById('confirmAddBtn').addEventListener('click', async () => {
     });
     addModal.classList.remove('show');
   } catch (err) {
-    alert('Failed to add user: ' + err.message);
+    console.error('Add user error:', err);
+    alert('Failed to add user.\n\nError: ' + err.message + '\n\nCheck that Firestore rules are published and your email matches the admin email exactly.');
   } finally {
     btn.textContent = 'Add User'; btn.disabled = false;
   }
